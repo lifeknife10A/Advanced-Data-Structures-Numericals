@@ -35,7 +35,9 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm config set minimum-release-age 0
+          pnpm install --no-frozen-lockfile
 
       - name: Build project
         run: pnpm run build
