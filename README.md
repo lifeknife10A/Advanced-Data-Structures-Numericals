@@ -1,6 +1,8 @@
 # Advanced Data Structures Numericals
 ### *University Exam & Step-by-Step Mathematical Derivation Platform*
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-lifeknife10a.github.io-8C2D19?style=for-the-badge&logo=githubpages&logoColor=white)](https://lifeknife10a.github.io/Advanced-Data-Structures-Numericals/)
+
 [![React 19](https://img.shields.io/badge/React-19.2.8-blue.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0.2-3178C6.svg)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.3-38B2AC.svg)](https://tailwindcss.com/)
@@ -8,6 +10,8 @@
 [![pnpm](https://img.shields.io/badge/Maintained%20with-pnpm-F69220.svg)](https://pnpm.io/)
 [![Design](https://img.shields.io/badge/Aesthetic-Champagne%20Editorial%20Academic-C4B59D.svg)]()
 [![Playwright Verified](https://img.shields.io/badge/Playwright-100%25%20Passing-2EAD33.svg)]()
+
+> 🌐 **Live Web Application**: [https://lifeknife10a.github.io/Advanced-Data-Structures-Numericals/](https://lifeknife10a.github.io/Advanced-Data-Structures-Numericals/)
 
 ---
 
