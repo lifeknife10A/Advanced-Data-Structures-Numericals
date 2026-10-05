@@ -17,37 +17,40 @@ export function layoutGraph(
   }
 
   // If ALL vertices have predefined non-zero coordinates, retain them
-  const hasAllCoordinates = vertices.every((v) => typeof v.x === 'number' && typeof v.y === 'number' && v.x > 0 && v.y > 0);
+  const hasAllCoordinates = vertices.every(
+    (v) => typeof v.x === 'number' && typeof v.y === 'number' && v.x > 0 && v.y > 0
+  );
   if (hasAllCoordinates) {
     return { vertices, edges };
   }
 
+  return applyCircularLayout({ vertices, edges }, width, height);
+}
+
+/**
+ * Arranges vertices in a symmetric circular / elliptical layout
+ */
+export function applyCircularLayout(
+  data: GraphData,
+  width: number = 600,
+  height: number = 360
+): GraphData {
+  const vertices = data.vertices.map((v) => ({ ...v }));
+  const edges = data.edges.map((e) => ({ ...e }));
   const n = vertices.length;
 
-  // If single vertex, center it
   if (n === 1) {
     vertices[0].x = width / 2;
     vertices[0].y = height / 2;
     return { vertices, edges };
   }
 
-  // Check if graph is a pure directed acyclic graph (for layered layout)
-  const isPureDirected = edges.length > 0 && edges.every((e) => e.directed);
-  if (isPureDirected && n >= 3 && n <= 10) {
-    const isAcyclic = tryLayeredLayout(vertices, edges, width, height);
-    if (isAcyclic) {
-      return { vertices, edges };
-    }
-  }
-
-  // Circular / Regular Polygon Layout fallback (Clean, symmetric, no overlapping)
   const centerX = width / 2;
   const centerY = height / 2;
-  const radiusX = Math.min(width, height) * 0.40;
+  const radiusX = Math.min(width, height) * 0.42;
   const radiusY = Math.min(width, height) * 0.38;
 
   vertices.forEach((vertex, i) => {
-    // Start from top (-PI/2) and distribute evenly clockwise
     const angle = (2 * Math.PI * i) / n - Math.PI / 2;
     vertex.x = Math.round(centerX + radiusX * Math.cos(angle));
     vertex.y = Math.round(centerY + radiusY * Math.sin(angle));
@@ -57,14 +60,48 @@ export function layoutGraph(
 }
 
 /**
- * Attempts a layered topological layout for Directed Acyclic Graphs (DAGs)
+ * Arranges vertices in a 2-column or 3-column bipartite / grid layout
  */
-function tryLayeredLayout(
-  vertices: GraphVertex[],
-  edges: GraphEdge[],
-  width: number,
-  height: number
-): boolean {
+export function applyGridLayout(
+  data: GraphData,
+  width: number = 600,
+  height: number = 360
+): GraphData {
+  const vertices = data.vertices.map((v) => ({ ...v }));
+  const edges = data.edges.map((e) => ({ ...e }));
+  const n = vertices.length;
+
+  if (n <= 1) return applyCircularLayout(data, width, height);
+
+  const cols = n <= 4 ? 2 : n <= 8 ? 3 : 4;
+  const rows = Math.ceil(n / cols);
+
+  const padX = 90;
+  const padY = 70;
+  const stepX = (width - padX * 2) / Math.max(cols - 1, 1);
+  const stepY = (height - padY * 2) / Math.max(rows - 1, 1);
+
+  vertices.forEach((vertex, i) => {
+    const c = i % cols;
+    const r = Math.floor(i / cols);
+    vertex.x = Math.round(padX + c * stepX);
+    vertex.y = Math.round(padY + r * stepY);
+  });
+
+  return { vertices, edges };
+}
+
+/**
+ * Arranges vertices horizontally from Left to Right (Layered / DAG layout)
+ */
+export function applyLayeredLayout(
+  data: GraphData,
+  width: number = 600,
+  height: number = 360
+): GraphData {
+  const vertices = data.vertices.map((v) => ({ ...v }));
+  const edges = data.edges.map((e) => ({ ...e }));
+
   const inDegree: Record<string, number> = {};
   const adj: Record<string, string[]> = {};
 
@@ -82,7 +119,6 @@ function tryLayeredLayout(
     }
   });
 
-  // Calculate topological rank / layer
   const rank: Record<string, number> = {};
   const queue: string[] = [];
 
@@ -108,12 +144,15 @@ function tryLayeredLayout(
     }
   }
 
-  // If cycle detected, layered layout cannot proceed
+  // If cyclic, assign fallback ranks
   if (processedCount < vertices.length) {
-    return false;
+    vertices.forEach((v, i) => {
+      if (rank[v.id] === undefined) {
+        rank[v.id] = i % 3;
+      }
+    });
   }
 
-  // Group vertices by layer
   const layers: Record<number, GraphVertex[]> = {};
   let maxLayer = 0;
 
@@ -126,7 +165,7 @@ function tryLayeredLayout(
 
   const numLayers = maxLayer + 1;
   const paddingX = 80;
-  const paddingY = 75;
+  const paddingY = 70;
   const layerWidth = numLayers > 1 ? (width - paddingX * 2) / (numLayers - 1) : 0;
 
   for (let r = 0; r <= maxLayer; r++) {
@@ -143,5 +182,5 @@ function tryLayeredLayout(
     });
   }
 
-  return true;
+  return { vertices, edges };
 }

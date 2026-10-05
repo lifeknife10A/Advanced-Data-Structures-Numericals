@@ -13,7 +13,7 @@ import { GraphCanvas } from './components/canvas/GraphCanvas';
 import { ExamDrawer } from './components/exam/ExamDrawer';
 import { PRESET_LIBRARY, PresetItem } from './data/presets';
 import { StepSnapshot } from './types/animation';
-import { GraphData } from './types/graph';
+import { GraphData, GraphVertex } from './types/graph';
 import { BookOpen, PanelRightOpen, Sparkles } from 'lucide-react';
 
 // Algorithmic Engines
@@ -221,6 +221,14 @@ export function App() {
     setCurrentStepIndex(0);
   };
 
+  const handleUpdateVerticesPositions = (updatedVertices: GraphVertex[]) => {
+    const updatedGraph: GraphData = {
+      vertices: updatedVertices,
+      edges: activeGraph.edges || [],
+    };
+    setCustomGraph(updatedGraph);
+  };
+
   const isTwoThree = activeAlgorithmId.startsWith('2-3');
 
   return (
@@ -309,6 +317,7 @@ export function App() {
               activeNodeIds={currentSnapshot?.activeNodeIds}
               activeEdgeIds={currentSnapshot?.activeEdgeIds}
               algorithmName={currentSnapshot?.algorithmName}
+              onUpdateVertices={handleUpdateVerticesPositions}
             />
           )}
 
