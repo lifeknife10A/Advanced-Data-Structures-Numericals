@@ -39,7 +39,7 @@ export const DerivationCard: React.FC<DerivationCardProps> = ({ snapshot }) => {
   };
 
   return (
-    <div className="space-y-4.5 p-6">
+    <div className="space-y-3.5 sm:space-y-4.5 p-4 sm:p-6">
       {/* Title & Status Badge */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3.5 border-b border-[#E2D8C7]">
         <div>

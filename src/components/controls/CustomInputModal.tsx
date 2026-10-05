@@ -69,26 +69,27 @@ export const CustomInputModal: React.FC<CustomInputModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#221F1E]/40 backdrop-blur-xs p-4">
-      <div className="bg-[#FAF8F5] border border-[#C4B59D] rounded-xl shadow-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#221F1E]/40 backdrop-blur-xs p-3.5 sm:p-4 overflow-y-auto">
+      <div className="bg-[#FAF8F5] border border-[#C4B59D] rounded-xl shadow-xl max-w-lg w-full max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="px-6 py-4 bg-[#F4EFE6] border-b border-[#E2D8C7] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="w-5 h-5 text-[#8C2D19]" />
-            <h3 className="text-lg font-serif font-bold text-[#221F1E] m-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[#F4EFE6] border-b border-[#E2D8C7] flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-[#8C2D19]" />
+            <h3 className="text-base sm:text-lg font-serif font-bold text-[#221F1E] m-0 truncate">
               Custom Sequence: {algorithmName}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-[#847B72] hover:text-[#221F1E] hover:bg-[#EDE5D8]"
+            className="p-1.5 rounded-md text-[#847B72] hover:text-[#221F1E] hover:bg-[#EDE5D8]"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4">
           <div>
             <label className="block text-xs font-serif font-semibold text-[#59524A] uppercase tracking-wider mb-1.5">
               {algorithmName.includes('Delete') ? 'Initial Tree Keys (Comma-separated)' : 'Key Sequence (Comma-separated)'}
@@ -98,7 +99,7 @@ export const CustomInputModal: React.FC<CustomInputModalProps> = ({
               value={keysInput}
               onChange={(e) => setKeysInput(e.target.value)}
               placeholder="e.g. 10, 20, 30, 40, 50, 25"
-              className="w-full px-3 py-2 border border-[#C4B59D] rounded-md bg-[#FAF8F5] text-[#221F1E] font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-[#8C2D19]/40"
+              className="w-full px-3 py-2 border border-[#C4B59D] rounded-lg bg-[#FAF8F5] text-[#221F1E] font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-[#8C2D19]/40"
             />
             <p className="text-[11px] text-[#847B72] mt-1 font-serif italic">
               Values will be inserted sequentially from left to right.
@@ -115,7 +116,7 @@ export const CustomInputModal: React.FC<CustomInputModalProps> = ({
                 value={secondaryInput}
                 onChange={(e) => setSecondaryInput(e.target.value)}
                 placeholder="e.g. 20, 50"
-                className="w-full px-3 py-2 border border-[#C4B59D] rounded-md bg-[#FAF8F5] text-[#221F1E] font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-[#8C2D19]/40"
+                className="w-full px-3 py-2 border border-[#C4B59D] rounded-lg bg-[#FAF8F5] text-[#221F1E] font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-[#8C2D19]/40"
               />
             </div>
           )}
@@ -130,29 +131,29 @@ export const CustomInputModal: React.FC<CustomInputModalProps> = ({
                 value={secondaryInput}
                 onChange={(e) => setSecondaryInput(e.target.value)}
                 placeholder="e.g. 70"
-                className="w-full px-3 py-2 border border-[#C4B59D] rounded-md bg-[#FAF8F5] text-[#221F1E] font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-[#8C2D19]/40"
+                className="w-full px-3 py-2 border border-[#C4B59D] rounded-lg bg-[#FAF8F5] text-[#221F1E] font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-[#8C2D19]/40"
               />
             </div>
           )}
 
           {error && (
-            <div className="flex items-center gap-2 text-xs text-[#8C2D19] bg-[#8C2D19]/10 border border-[#8C2D19]/20 p-2.5 rounded-md font-serif">
+            <div className="flex items-center gap-2 text-xs text-[#8C2D19] bg-[#8C2D19]/10 border border-[#8C2D19]/20 p-2.5 rounded-lg font-serif">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E2D8C7]">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-3 border-t border-[#E2D8C7]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-serif text-[#59524A] hover:bg-[#F4EFE6] rounded-md border border-[#E2D8C7]"
+              className="px-4 py-2 text-xs font-serif text-[#59524A] hover:bg-[#F4EFE6] rounded-lg border border-[#E2D8C7] text-center"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-serif font-bold text-[#FAF8F5] bg-[#8C2D19] hover:bg-[#722312] rounded-md shadow-xs transition-all"
+              className="px-5 py-2.5 sm:py-2 text-xs font-serif font-bold text-[#FAF8F5] bg-[#8C2D19] hover:bg-[#722312] rounded-lg shadow-xs transition-all text-center"
             >
               Generate Step-by-Step Derivation
             </button>

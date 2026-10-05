@@ -127,34 +127,34 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
   if (!tree) {
     return (
-      <div className="w-full h-[580px] flex flex-col items-center justify-center bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl text-[#847B72] font-serif p-8 shadow-inner">
-        <p className="text-xl italic font-serif text-[#59524A]">Tree is currently empty.</p>
-        <p className="text-sm text-[#A89F91] mt-1.5 font-serif">Use the playback controls below or press Step Next to begin numerical construction.</p>
+      <div className="w-full h-[340px] sm:h-[460px] md:h-[580px] flex flex-col items-center justify-center bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl text-[#847B72] font-serif p-4 sm:p-8 shadow-inner text-center">
+        <p className="text-base sm:text-xl italic font-serif text-[#59524A]">Tree is currently empty.</p>
+        <p className="text-xs sm:text-sm text-[#A89F91] mt-1 font-serif max-w-md">Use playback controls below or press Step Next to begin construction.</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[580px] bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl overflow-hidden relative shadow-inner">
-      {/* Top Floating Rotation Mechanism Banner */}
+    <div className="w-full h-[340px] sm:h-[460px] md:h-[580px] bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl overflow-hidden relative shadow-inner">
+      {/* Top Floating Rotation Mechanism Banner (Mobile-Optimized) */}
       {rotationMeta && (
-        <div className="absolute top-4 left-4 z-20 max-w-md bg-[#FAF8F5]/95 backdrop-blur-md border-2 border-[#8C2D19] rounded-xl p-3 shadow-lg transition-all animate-fadeIn">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#8C2D19] animate-ping" />
-            <span className="text-xs font-mono font-bold text-[#8C2D19] uppercase tracking-wider">
+        <div className="absolute top-3 left-3 z-20 max-w-[calc(100%-115px)] sm:max-w-md bg-[#FAF8F5]/95 backdrop-blur-md border-2 border-[#8C2D19] rounded-xl p-2.5 sm:p-3 shadow-lg transition-all animate-fadeIn">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#8C2D19] animate-ping shrink-0" />
+            <span className="text-[10px] sm:text-xs font-mono font-bold text-[#8C2D19] uppercase tracking-wider truncate">
               {rotationMeta.type} Rotation Mechanism
             </span>
             {rotationMeta.direction && (
-              <span className="text-xs font-serif italic text-[#59524A]">
-                ({rotationMeta.direction === 'clockwise' ? '⟳ Clockwise' : '⟲ Counter-Clockwise'})
+              <span className="text-[10px] sm:text-xs font-serif italic text-[#59524A] hidden xs:inline">
+                ({rotationMeta.direction === 'clockwise' ? '⟳ CW' : '⟲ CCW'})
               </span>
             )}
           </div>
-          <p className="text-xs font-serif text-[#221F1E] font-medium leading-relaxed">
+          <p className="text-[11px] sm:text-xs font-serif text-[#221F1E] font-medium leading-tight sm:leading-relaxed line-clamp-2 sm:line-clamp-none">
             {rotationMeta.description}
           </p>
           {rotationMeta.transferredSubtree && (
-            <div className="mt-1.5 pt-1.5 border-t border-[#E2D8C7] text-[11px] font-mono text-[#8C6D3B]">
+            <div className="mt-1 pt-1 border-t border-[#E2D8C7] text-[10px] sm:text-[11px] font-mono text-[#8C6D3B] truncate">
               ↳ {rotationMeta.transferredSubtree}
             </div>
           )}
@@ -164,6 +164,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
       <svg
         viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
         className="w-full h-full select-none"
+        preserveAspectRatio="xMidYMid meet"
       >
         <defs>
           {/* Drop shadow filter for nodes */}

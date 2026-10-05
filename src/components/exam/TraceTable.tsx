@@ -21,14 +21,14 @@ export const TraceTable: React.FC<TraceTableProps> = ({
   }
 
   return (
-    <div className="p-5 overflow-x-auto">
+    <div className="p-3 sm:p-5 overflow-x-auto">
       <table className="w-full text-left border-collapse font-serif">
         <thead>
           <tr className="border-b-2 border-[#C4B59D] bg-[#F4EFE6]">
             {headers.map((h, i) => (
               <th
                 key={i}
-                className="py-3 px-4 text-xs sm:text-sm font-bold text-[#221F1E] whitespace-nowrap tracking-tight"
+                className="py-2.5 px-3 sm:py-3 sm:px-4 text-xs sm:text-sm font-bold text-[#221F1E] whitespace-nowrap tracking-tight"
               >
                 {h}
               </th>
@@ -50,7 +50,7 @@ export const TraceTable: React.FC<TraceTableProps> = ({
                 }`}
               >
                 {row.cells.map((cell, cellIdx) => (
-                  <td key={cellIdx} className="py-2.5 px-4 whitespace-nowrap font-mono text-xs sm:text-sm">
+                  <td key={cellIdx} className="py-2 px-3 sm:py-2.5 sm:px-4 whitespace-nowrap font-mono text-xs sm:text-sm">
                     {typeof cell === 'string' &&
                     (cell.includes('UNBALANCED') || cell.includes('REJECT') || cell.includes('OVERFLOW')) ? (
                       <span className="inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-[#FDF2F0] text-[#8C2D19] border border-[#F2C0B8]">

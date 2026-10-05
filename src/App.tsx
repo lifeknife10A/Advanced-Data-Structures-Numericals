@@ -202,7 +202,7 @@ export function App() {
       />
 
       {/* Main Full Canvas Layout */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col gap-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-col gap-3 sm:gap-4">
         {/* Interactive Quick Operations Bar for Trees (Direct Delete, Search, and Insert) */}
         {category === 'TREE' && (
           <QuickOpsBar
@@ -215,13 +215,13 @@ export function App() {
         )}
 
         {/* Canvas Header Toolbar */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <span className="w-3.5 h-3.5 rounded-full bg-[#8C2D19] shadow-2xs" />
-            <h2 className="text-base sm:text-lg font-serif font-bold uppercase tracking-wider text-[#3D3833] m-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+            <span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#8C2D19] shadow-2xs shrink-0" />
+            <h2 className="text-sm sm:text-base md:text-lg font-serif font-bold uppercase tracking-wider text-[#3D3833] m-0">
               Interactive {category === 'TREE' ? 'Tree' : 'Graph'} Canvas
             </h2>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-[#EDE5D8] text-[#59524A] border border-[#D4C6B1]">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] sm:text-xs font-mono font-semibold bg-[#EDE5D8] text-[#59524A] border border-[#D4C6B1]">
               {currentSnapshot?.algorithmName || ''}
             </span>
           </div>
@@ -229,9 +229,9 @@ export function App() {
           {/* Slide-out Ledger Drawer Trigger Button */}
           <button
             onClick={() => setIsExamDrawerOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-serif font-bold bg-[#F4EFE6] hover:bg-[#EDE5D8] text-[#8C2D19] border-2 border-[#C4B59D] hover:border-[#8C2D19] shadow-sm transition-all group"
+            className="w-full sm:w-auto justify-center flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-serif font-bold bg-[#F4EFE6] hover:bg-[#EDE5D8] text-[#8C2D19] border-2 border-[#C4B59D] hover:border-[#8C2D19] shadow-xs transition-all group"
           >
-            <BookOpen className="w-4.5 h-4.5 text-[#8C2D19] group-hover:scale-110 transition-transform" />
+            <BookOpen className="w-4 h-4 text-[#8C2D19] group-hover:scale-110 transition-transform" />
             <span>Faculty Exam & Derivation Ledger</span>
             <PanelRightOpen className="w-4 h-4 text-[#8C6D3B] group-hover:translate-x-0.5 transition-transform" />
           </button>
@@ -260,25 +260,25 @@ export function App() {
           {/* Floating Drawer Quick-Open Pill on Canvas */}
           <button
             onClick={() => setIsExamDrawerOpen(true)}
-            className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#FAF8F5]/90 hover:bg-[#FAF8F5] text-[#8C2D19] text-xs sm:text-sm font-serif font-bold border border-[#C4B59D] shadow-md backdrop-blur-xs transition-all hover:scale-102"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-[#FAF8F5]/90 hover:bg-[#FAF8F5] text-[#8C2D19] text-[11px] sm:text-sm font-serif font-bold border border-[#C4B59D] shadow-md backdrop-blur-xs transition-all hover:scale-102"
           >
-            <Sparkles className="w-4 h-4 text-[#8C6D3B]" />
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8C6D3B]" />
             <span>View Faculty Derivation</span>
-            <PanelRightOpen className="w-3.5 h-3.5" />
+            <PanelRightOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
         </div>
 
         {/* Step Title & Explanation Banner Under Canvas */}
-        <div className="bg-[#F4EFE6] border border-[#E2D8C7] rounded-xl px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm font-serif shadow-2xs">
-          <div className="flex items-center gap-3 text-[#221F1E]">
-            <span className="font-mono font-bold text-[#8C2D19] text-sm sm:text-base">
+        <div className="bg-[#F4EFE6] border border-[#E2D8C7] rounded-xl px-3.5 sm:px-5 py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm font-serif shadow-2xs">
+          <div className="flex items-center gap-2 sm:gap-3 text-[#221F1E] flex-wrap">
+            <span className="font-mono font-bold text-[#8C2D19] text-xs sm:text-base">
               Step {currentStepIndex + 1}:
             </span>
-            <span className="font-bold text-sm sm:text-base text-[#221F1E]">
+            <span className="font-bold text-xs sm:text-base text-[#221F1E]">
               {currentSnapshot?.title}
             </span>
             {currentSnapshot?.statusBadge && (
-              <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-[#EDE5D8] text-[#59524A] border border-[#D4C6B1]">
+              <span className="text-[10px] sm:text-xs font-mono font-semibold px-2 py-0.5 rounded bg-[#EDE5D8] text-[#59524A] border border-[#D4C6B1]">
                 {currentSnapshot.statusBadge.text}
               </span>
             )}

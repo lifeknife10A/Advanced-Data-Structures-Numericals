@@ -21,15 +21,19 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
   if (vertices.length === 0) {
     return (
-      <div className="w-full h-[580px] flex items-center justify-center bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl text-[#847B72] font-serif p-8 shadow-inner">
-        <p className="text-xl italic font-serif">No graph data available.</p>
+      <div className="w-full h-[340px] sm:h-[460px] md:h-[580px] flex items-center justify-center bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl text-[#847B72] font-serif p-4 sm:p-8 shadow-inner text-center">
+        <p className="text-base sm:text-xl italic font-serif">No graph data available.</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-[580px] bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl overflow-hidden relative shadow-inner">
-      <svg viewBox={`0 0 ${canvasWidth} ${canvasHeight}`} className="w-full h-full select-none">
+    <div className="w-full h-[340px] sm:h-[460px] md:h-[580px] bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl overflow-hidden relative shadow-inner">
+      <svg
+        viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+        className="w-full h-full select-none"
+        preserveAspectRatio="xMidYMid meet"
+      >
         <defs>
           {/* Arrowhead marker for directed edges */}
           <marker
@@ -99,15 +103,21 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               strokeDasharray = '5 4';
             } else if (isCrossBack) {
               strokeColor = '#8C6D3B';
-              strokeWidth = 2.6;
+              strokeWidth = 2.4;
               strokeDasharray = '4 3';
+            }
+
+            const isEdgeActive = activeEdgeIds.includes(edge.id);
+            if (isEdgeActive) {
+              strokeColor = '#8C2D19';
+              strokeWidth = Math.max(strokeWidth, 4);
             }
 
             const midX = (uX + vX) / 2;
             const midY = (uY + vY) / 2;
 
             return (
-              <g key={edge.id}>
+              <g key={edge.id} className="edge-group">
                 <line
                   x1={uX}
                   y1={uY}
@@ -117,28 +127,27 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                   strokeWidth={strokeWidth}
                   strokeDasharray={strokeDasharray}
                   strokeLinecap="round"
-                  markerEnd={edge.directed ? (isTreeEdge ? 'url(#arrowhead-active)' : 'url(#arrowhead)') : undefined}
-                  className="edge-path"
+                  markerEnd={edge.directed ? (isEdgeActive ? 'url(#arrowhead-active)' : 'url(#arrowhead)') : undefined}
                 />
 
-                {/* Edge Weight Pill Badge */}
+                {/* Edge Weight Pill (if weighted) */}
                 {edge.weight !== undefined && (
-                  <g transform={`translate(${midX}, ${midY})`}>
+                  <g>
                     <rect
-                      x="-14"
-                      y="-11"
-                      width="28"
-                      height="22"
-                      rx="6"
-                      fill="#FAF8F5"
-                      stroke={strokeColor}
-                      strokeWidth="1.6"
+                      x={midX - 16}
+                      y={midY - 12}
+                      width="32"
+                      height="20"
+                      rx="5"
+                      fill={isMst ? '#EDF5F0' : isEdgeActive ? '#FAF0EE' : '#FAF8F5'}
+                      stroke={isMst ? '#2B4C38' : isEdgeActive ? '#8C2D19' : '#C4B59D'}
+                      strokeWidth="1.2"
                     />
                     <text
-                      x="0"
-                      y="5"
-                      fill="#221F1E"
-                      fontSize="13"
+                      x={midX}
+                      y={midY + 2.5}
+                      fill={isMst ? '#2B4C38' : isEdgeActive ? '#8C2D19' : '#221F1E'}
+                      fontSize="12.5"
                       fontWeight="bold"
                       fontFamily="JetBrains Mono, monospace"
                       textAnchor="middle"
@@ -158,29 +167,37 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             const scaleX = (x: number) => (x / 600) * 800 + 50;
             const scaleY = (y: number) => (y / 360) * 460 + 60;
 
-            const posX = scaleX(vertex.x);
-            const posY = scaleY(vertex.y);
+            const vX = scaleX(vertex.x);
+            const vY = scaleY(vertex.y);
 
-            const isActive =
-              vertex.state === 'visiting' ||
-              vertex.state === 'current' ||
-              activeNodeIds.includes(vertex.id);
-            const isCompleted = vertex.state === 'completed';
+            const isHighlighted = activeNodeIds.includes(vertex.id);
+            const isVisited = vertex.state === 'visited' || vertex.state === 'completed';
+            const isVisiting = vertex.state === 'visiting' || vertex.state === 'current';
 
-            const radius = 27;
+            let fillColor = '#F4EFE6';
+            let strokeColor = '#A8977E';
+            let textColor = '#221F1E';
+
+            if (isVisiting || isHighlighted) {
+              fillColor = '#FAF0EE';
+              strokeColor = '#8C2D19';
+              textColor = '#8C2D19';
+            } else if (isVisited) {
+              fillColor = '#EDE5D8';
+              strokeColor = '#7A6E5F';
+              textColor = '#3D3833';
+            }
+
+            const radius = 24;
 
             return (
-              <g
-                key={vertex.id}
-                className="node-transition"
-                filter="url(#graph-node-shadow)"
-              >
-                {/* Active Outer Ring */}
-                {isActive && (
+              <g key={vertex.id} filter="url(#graph-node-shadow)">
+                {/* Active Highlight Ring */}
+                {isHighlighted && (
                   <circle
-                    cx={posX}
-                    cy={posY}
-                    r={radius + 8}
+                    cx={vX}
+                    cy={vY}
+                    r={radius + 7}
                     fill="none"
                     stroke="#8C2D19"
                     strokeWidth="2.8"
@@ -190,106 +207,56 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
                 {/* Vertex Circle */}
                 <circle
-                  cx={posX}
-                  cy={posY}
+                  cx={vX}
+                  cy={vY}
                   r={radius}
-                  fill={isCompleted ? '#EFE9DE' : isActive ? '#FAF0EE' : '#F4EFE6'}
-                  stroke={isActive ? '#8C2D19' : isCompleted ? '#8C6D3B' : '#A8977E'}
-                  strokeWidth={isActive ? '3' : '2.2'}
+                  fill={fillColor}
+                  stroke={strokeColor}
+                  strokeWidth={isHighlighted || isVisiting ? '3' : '2'}
                 />
 
-                {/* Vertex Label */}
+                {/* Label */}
                 <text
-                  x={posX}
-                  y={posY + 6.5}
-                  fill="#221F1E"
-                  fontSize="18.5"
+                  x={vX}
+                  y={vY + 6.5}
+                  fill={textColor}
+                  fontSize="17"
                   fontWeight="700"
                   fontFamily="Playfair Display, serif"
                   textAnchor="middle"
                 >
-                  {vertex.label || vertex.id}
+                  {vertex.label}
                 </text>
 
-                {/* Algorithm-Specific Metrics Pill */}
-                {/* 1. Dijkstra: Distance */}
-                {algorithmName.includes('Dijkstra') && vertex.distance !== undefined && (
+                {/* Distance / In-Degree Annotation Badge */}
+                {(vertex.distance !== undefined || vertex.inDegree !== undefined || vertex.discoveryTime !== undefined) && (
                   <g>
                     <rect
-                      x={posX - 26}
-                      y={posY - radius - 18}
-                      width="52"
+                      x={vX - 22}
+                      y={vY - radius - 17}
+                      width="44"
                       height="16"
                       rx="4"
                       fill="#FAF8F5"
-                      stroke="#C4B59D"
+                      stroke={strokeColor}
                       strokeWidth="1.2"
                     />
                     <text
-                      x={posX}
-                      y={posY - radius - 5.5}
-                      fill="#8C2D19"
-                      fontSize="11"
-                      fontWeight="bold"
-                      fontFamily="JetBrains Mono, monospace"
-                      textAnchor="middle"
-                    >
-                      d: {vertex.distance === Infinity ? '∞' : vertex.distance}
-                    </text>
-                  </g>
-                )}
-
-                {/* 2. DFS: Discovery and Finish Times */}
-                {algorithmName.includes('DFS') &&
-                  (vertex.discoveryTime !== undefined || vertex.finishTime !== undefined) && (
-                    <g>
-                      <rect
-                        x={posX - 30}
-                        y={posY - radius - 18}
-                        width="60"
-                        height="16"
-                        rx="4"
-                        fill="#FAF8F5"
-                        stroke="#C4B59D"
-                        strokeWidth="1.2"
-                      />
-                      <text
-                        x={posX}
-                        y={posY - radius - 5.5}
-                        fill="#59524A"
-                        fontSize="10.5"
-                        fontWeight="bold"
-                        fontFamily="JetBrains Mono, monospace"
-                        textAnchor="middle"
-                      >
-                        {vertex.discoveryTime ?? '—'}/{vertex.finishTime ?? '—'}
-                      </text>
-                    </g>
-                  )}
-
-                {/* 3. Topological: In-degree */}
-                {algorithmName.includes('Topological') && vertex.inDegree !== undefined && (
-                  <g>
-                    <rect
-                      x={posX - 28}
-                      y={posY - radius - 18}
-                      width="56"
-                      height="16"
-                      rx="4"
-                      fill="#FAF8F5"
-                      stroke="#C4B59D"
-                      strokeWidth="1.2"
-                    />
-                    <text
-                      x={posX}
-                      y={posY - radius - 5.5}
+                      x={vX}
+                      y={vY - radius - 5}
                       fill="#59524A"
-                      fontSize="10.5"
+                      fontSize="10"
                       fontWeight="bold"
                       fontFamily="JetBrains Mono, monospace"
                       textAnchor="middle"
                     >
-                      deg⁻: {vertex.inDegree}
+                      {vertex.distance !== undefined
+                        ? vertex.distance === Infinity
+                          ? '∞'
+                          : `d:${vertex.distance}`
+                        : vertex.inDegree !== undefined
+                        ? `in:${vertex.inDegree}`
+                        : `${vertex.discoveryTime}/${vertex.finishTime || '?'}`}
                     </text>
                   </g>
                 )}

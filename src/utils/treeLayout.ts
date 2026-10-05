@@ -52,13 +52,16 @@ export function layoutTree(
   setCoordinates(clonedRoot, 0);
 
   // Normalize and scale X coordinates to fit canvas
-  const totalSlots = Math.max(currentX - 1, 1);
   const marginX = 100;
   const availableWidth = Math.max(canvasWidth - marginX * 2, 260);
 
   function scaleTree(node: TreeNode) {
     if (node.x !== undefined) {
-      node.x = marginX + (node.x / totalSlots) * availableWidth;
+      if (currentX <= 1) {
+        node.x = canvasWidth / 2;
+      } else {
+        node.x = marginX + (node.x / (currentX - 1)) * availableWidth;
+      }
     }
     if (node.left) scaleTree(node.left);
     if (node.right) scaleTree(node.right);
