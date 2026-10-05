@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { GraphVertex, GraphEdge } from '../../types/graph';
-import { Move, RefreshCw, Grid, GitFork, Sparkles } from 'lucide-react';
+import { Move, RefreshCw, Grid, GitFork } from 'lucide-react';
 import { applyCircularLayout, applyGridLayout, applyLayeredLayout } from '../../utils/graphLayout';
 
 interface GraphCanvasProps {
@@ -24,10 +24,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const canvasHeight = 580;
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const draggingVertexRef = useRef<string | null>(null);
+  const rafRef = useRef<number | null>(null);
 
-  // Local mutable positions for 60fps smooth dragging
+  // Local positions map for smooth rendering
   const [localPositions, setLocalPositions] = useState<Record<string, { x: number; y: number }>>({});
-  const [draggingVertexId, setDraggingVertexId] = useState<string | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
   // Sync positions when vertices prop changes externally
   useEffect(() => {
@@ -39,14 +41,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   }, [vertices]);
 
   // Coordinate scales: 600x360 logic coords -> 900x580 SVG coords
-  const scaleX = useCallback((x: number) => (x / 600) * 800 + 50, []);
-  const scaleY = useCallback((y: number) => (y / 360) * 460 + 60, []);
+  const scaleX = (x: number) => (x / 600) * 800 + 50;
+  const scaleY = (y: number) => (y / 360) * 460 + 60;
 
   // Inverse scale: 900x580 SVG coords -> 600x360 logic coords
-  const unscaleX = useCallback((svgX: number) => Math.round(Math.max(15, Math.min(585, ((svgX - 50) / 800) * 600))), []);
-  const unscaleY = useCallback((svgY: number) => Math.round(Math.max(15, Math.min(345, ((svgY - 60) / 460) * 360))), []);
+  const unscaleX = (svgX: number) => Math.round(Math.max(15, Math.min(585, ((svgX - 50) / 800) * 600)));
+  const unscaleY = (svgY: number) => Math.round(Math.max(15, Math.min(345, ((svgY - 60) / 460) * 360)));
 
-  // Get SVG coordinate from mouse / touch event
+  // Convert client (x, y) into SVG coordinates using matrix transform
   const getSVGCoordinates = useCallback((clientX: number, clientY: number) => {
     if (!svgRef.current) return null;
     const svg = svgRef.current;
@@ -58,33 +60,66 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     return pt.matrixTransform(ctm.inverse());
   }, []);
 
-  // Handle Drag Start
-  const handleStartDrag = (vertexId: string, clientX: number, clientY: number) => {
-    setDraggingVertexId(vertexId);
+  // Pointer Down on Node
+  const handleNodePointerDown = (vertexId: string, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Capture pointer events on the SVG for reliable tracking
+    if (svgRef.current) {
+      try {
+        svgRef.current.setPointerCapture(e.pointerId);
+      } catch (_) {
+        // Fallback for older browsers
+      }
+    }
+
+    draggingVertexRef.current = vertexId;
+    setActiveDragId(vertexId);
   };
 
-  // Handle Drag Move (Desktop & Touch)
-  const handlePointerMove = useCallback(
-    (clientX: number, clientY: number) => {
-      if (!draggingVertexId) return;
+  // Pointer Move on SVG (Throttled by requestAnimationFrame for 60fps / 120fps fluidity)
+  const handleSVGPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const draggingId = draggingVertexRef.current;
+    if (!draggingId) return;
 
-      const svgPt = getSVGCoordinates(clientX, clientY);
-      if (!svgPt) return;
+    e.preventDefault();
 
-      const graphX = unscaleX(svgPt.x);
-      const graphY = unscaleY(svgPt.y);
+    const svgPt = getSVGCoordinates(e.clientX, e.clientY);
+    if (!svgPt) return;
 
+    const graphX = unscaleX(svgPt.x);
+    const graphY = unscaleY(svgPt.y);
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+
+    rafRef.current = requestAnimationFrame(() => {
       setLocalPositions((prev) => ({
         ...prev,
-        [draggingVertexId]: { x: graphX, y: graphY },
+        [draggingId]: { x: graphX, y: graphY },
       }));
-    },
-    [draggingVertexId, getSVGCoordinates, unscaleX, unscaleY]
-  );
+    });
+  };
 
-  // Handle Drag End
-  const handleEndDrag = useCallback(() => {
-    if (!draggingVertexId) return;
+  // Pointer Up on SVG
+  const handleSVGPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    const draggingId = draggingVertexRef.current;
+    if (!draggingId) return;
+
+    if (svgRef.current) {
+      try {
+        svgRef.current.releasePointerCapture(e.pointerId);
+      } catch (_) {
+        // Fallback
+      }
+    }
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
 
     if (onUpdateVertices) {
       const updated = vertices.map((v) => {
@@ -94,45 +129,18 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       onUpdateVertices(updated);
     }
 
-    setDraggingVertexId(null);
-  }, [draggingVertexId, localPositions, onUpdateVertices, vertices]);
+    draggingVertexRef.current = null;
+    setActiveDragId(null);
+  };
 
-  // Window pointer listeners for smooth dragging outside SVG boundary
-  useEffect(() => {
-    if (!draggingVertexId) return;
-
-    const onMouseMove = (e: MouseEvent) => {
-      handlePointerMove(e.clientX, e.clientY);
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    };
-    const onMouseUp = () => {
-      handleEndDrag();
-    };
-    const onTouchEnd = () => {
-      handleEndDrag();
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('touchend', onTouchEnd);
-
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      window.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [draggingVertexId, handlePointerMove, handleEndDrag]);
-
-  // Apply Layout Presets on the fly
+  // Layout Preset Handler
   const handleApplyLayout = (layoutType: 'circle' | 'grid' | 'layered') => {
     const currentGraph = {
-      vertices: vertices.map((v) => ({ ...v, x: localPositions[v.id]?.x ?? v.x, y: localPositions[v.id]?.y ?? v.y })),
+      vertices: vertices.map((v) => ({
+        ...v,
+        x: localPositions[v.id]?.x ?? v.x,
+        y: localPositions[v.id]?.y ?? v.y,
+      })),
       edges,
     };
 
@@ -144,6 +152,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     } else if (layoutType === 'layered') {
       laidOut = applyLayeredLayout(currentGraph);
     }
+
+    const posMap: Record<string, { x: number; y: number }> = {};
+    laidOut.vertices.forEach((v) => {
+      posMap[v.id] = { x: v.x, y: v.y };
+    });
+    setLocalPositions(posMap);
 
     if (onUpdateVertices) {
       onUpdateVertices(laidOut.vertices);
@@ -159,12 +173,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   }
 
   return (
-    <div className="w-full h-[340px] sm:h-[460px] md:h-[580px] bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl overflow-hidden relative shadow-inner select-none">
+    <div className="w-full h-[340px] sm:h-[460px] md:h-[580px] bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl overflow-hidden relative shadow-inner select-none touch-none">
       {/* Top Floating Layout Preset Toolbar & Drag Hint */}
       <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 sm:gap-2 flex-wrap max-w-[calc(100%-120px)]">
         <div className="hidden xs:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAF8F5]/90 border border-[#C4B59D] text-[11px] font-serif text-[#59524A] shadow-xs backdrop-blur-xs">
           <Move className="w-3.5 h-3.5 text-[#8C2D19]" />
-          <span>Drag nodes to match exam paper</span>
+          <span>Drag nodes freely to match exam paper</span>
         </div>
 
         {/* Layout Switcher Buttons */}
@@ -202,8 +216,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
-        className="w-full h-full select-none"
+        className="w-full h-full select-none touch-none"
         preserveAspectRatio="xMidYMid meet"
+        onPointerMove={handleSVGPointerMove}
+        onPointerUp={handleSVGPointerUp}
+        onPointerCancel={handleSVGPointerUp}
       >
         <defs>
           {/* Arrowhead marker for directed edges */}
@@ -237,7 +254,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </defs>
 
         {/* Graph Edges */}
-        <g className="edges">
+        <g className="edges pointer-events-none">
           {edges.map((edge) => {
             const u = vertices.find((v) => v.id === edge.source);
             const v = vertices.find((vert) => vert.id === edge.target);
@@ -289,7 +306,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             const midY = (uY + vY) / 2;
 
             return (
-              <g key={edge.id} className="edge-group pointer-events-none">
+              <g key={edge.id} className="edge-group">
                 <line
                   x1={uX}
                   y1={uY}
@@ -333,7 +350,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           })}
         </g>
 
-        {/* Graph Vertices (Draggable) */}
+        {/* Graph Vertices (Draggable with Pointer Events) */}
         <g className="vertices">
           {vertices.map((vertex) => {
             const rawX = localPositions[vertex.id]?.x ?? vertex.x;
@@ -345,13 +362,13 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             const isHighlighted = activeNodeIds.includes(vertex.id);
             const isVisited = vertex.state === 'visited' || vertex.state === 'completed';
             const isVisiting = vertex.state === 'visiting' || vertex.state === 'current';
-            const isBeingDragged = draggingVertexId === vertex.id;
+            const isBeingDragged = activeDragId === vertex.id;
 
             let fillColor = '#F4EFE6';
             let strokeColor = '#A8977E';
             let textColor = '#221F1E';
 
-            if (isVisiting || isHighlighted) {
+            if (isVisiting || isHighlighted || isBeingDragged) {
               fillColor = '#FAF0EE';
               strokeColor = '#8C2D19';
               textColor = '#8C2D19';
@@ -367,19 +384,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               <g
                 key={vertex.id}
                 filter="url(#graph-node-shadow)"
-                className="cursor-grab active:cursor-grabbing transition-transform duration-75"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  handleStartDrag(vertex.id, e.clientX, e.clientY);
-                }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                  if (e.touches.length > 0) {
-                    handleStartDrag(vertex.id, e.touches[0].clientX, e.touches[0].clientY);
-                  }
-                }}
+                className="cursor-grab active:cursor-grabbing touch-none select-none"
+                onPointerDown={(e) => handleNodePointerDown(vertex.id, e)}
               >
-                {/* Dragging Aura / Active Highlight Ring */}
+                {/* Active Highlight Ring (Static & Elegant, NO spinning bug) */}
                 {(isHighlighted || isBeingDragged) && (
                   <circle
                     cx={vX}
@@ -387,9 +395,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     r={radius + 7}
                     fill="none"
                     stroke="#8C2D19"
-                    strokeWidth="2.8"
-                    strokeDasharray={isBeingDragged ? '2 2' : '4 2'}
-                    className={isBeingDragged ? 'animate-spin' : ''}
+                    strokeWidth={isBeingDragged ? '3.2' : '2.8'}
+                    strokeDasharray={isBeingDragged ? 'none' : '4 2'}
                   />
                 )}
 
@@ -412,14 +419,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                   fontWeight="700"
                   fontFamily="Playfair Display, serif"
                   textAnchor="middle"
-                  className="pointer-events-none"
+                  className="pointer-events-none select-none"
                 >
                   {vertex.label}
                 </text>
 
                 {/* Distance / In-Degree Annotation Badge */}
                 {(vertex.distance !== undefined || vertex.inDegree !== undefined || vertex.discoveryTime !== undefined) && (
-                  <g className="pointer-events-none">
+                  <g className="pointer-events-none select-none">
                     <rect
                       x={vX - 22}
                       y={vY - radius - 17}
