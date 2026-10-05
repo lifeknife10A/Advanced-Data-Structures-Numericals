@@ -4,13 +4,16 @@ import { Header } from './components/layout/Header';
 import { AlgorithmTabs } from './components/layout/AlgorithmTabs';
 import { PresetsBar } from './components/controls/PresetsBar';
 import { QuickOpsBar } from './components/controls/QuickOpsBar';
+import { QuickGraphOpsBar } from './components/controls/QuickGraphOpsBar';
 import { PlaybackControls } from './components/controls/PlaybackControls';
 import { CustomInputModal } from './components/controls/CustomInputModal';
+import { CustomGraphModal } from './components/controls/CustomGraphModal';
 import { TreeCanvas } from './components/canvas/TreeCanvas';
 import { GraphCanvas } from './components/canvas/GraphCanvas';
 import { ExamDrawer } from './components/exam/ExamDrawer';
 import { PRESET_LIBRARY, PresetItem } from './data/presets';
 import { StepSnapshot } from './types/animation';
+import { GraphData } from './types/graph';
 import { BookOpen, PanelRightOpen, Sparkles } from 'lucide-react';
 
 // Algorithmic Engines
@@ -33,12 +36,16 @@ export function App() {
   // Drawer Open / Closed State
   const [isExamDrawerOpen, setIsExamDrawerOpen] = useState<boolean>(false);
 
-  // Custom Sequence State
+  // Custom Tree State
   const [customParams, setCustomParams] = useState<{
     keys?: number[];
     deleteKeys?: number[];
     searchKey?: number;
   } | null>(null);
+
+  // Custom Graph State
+  const [customGraph, setCustomGraph] = useState<GraphData | null>(null);
+  const [customStartVertex, setCustomStartVertex] = useState<string | null>(null);
 
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
 
@@ -56,18 +63,22 @@ export function App() {
     );
   }, [activePresetId, activeAlgorithmId]);
 
-  // Current active keys
+  // Current active tree keys
   const activeKeys = customParams?.keys || currentPreset.keys || [10, 20, 30, 40, 50, 25];
   const activeDeleteKeys = customParams?.deleteKeys || currentPreset.deleteKeys || [70, 50, 60, 20];
   const activeSearchKey = customParams?.searchKey ?? currentPreset.searchKey ?? 70;
+
+  // Current active graph & start vertex
+  const activeGraph = customGraph || currentPreset.graph || { vertices: [], edges: [] };
+  const activeStartVertex = customStartVertex || currentPreset.startVertex || (activeGraph.vertices[0]?.id || 'A');
 
   // Generate Step Snapshots dynamically based on active algorithm & parameters
   const steps: StepSnapshot[] = useMemo(() => {
     const keys = activeKeys;
     const deleteKeys = activeDeleteKeys;
     const searchKey = activeSearchKey;
-    const graph = currentPreset.graph;
-    const startVertex = currentPreset.startVertex || 'A';
+    const graph = activeGraph;
+    const startVertex = activeStartVertex;
 
     switch (activeAlgorithmId) {
       // Tree Algorithms
@@ -120,13 +131,23 @@ export function App() {
       default:
         return generateAVLInsertionSteps(keys);
     }
-  }, [activeAlgorithmId, activePresetId, customParams, currentPreset, activeKeys, activeDeleteKeys, activeSearchKey]);
+  }, [
+    activeAlgorithmId,
+    activePresetId,
+    customParams,
+    currentPreset,
+    activeKeys,
+    activeDeleteKeys,
+    activeSearchKey,
+    activeGraph,
+    activeStartVertex,
+  ]);
 
-  // Reset step index when algorithm or preset changes
+  // Reset step index when algorithm or parameters change
   useEffect(() => {
     setCurrentStepIndex(0);
     setIsPlaying(false);
-  }, [activeAlgorithmId, activePresetId, customParams]);
+  }, [activeAlgorithmId, activePresetId, customParams, customGraph, customStartVertex]);
 
   // Trigger celebration confetti upon reaching final step
   useEffect(() => {
@@ -145,6 +166,8 @@ export function App() {
   const handleCategoryChange = (newCat: 'TREE' | 'GRAPH') => {
     setCategory(newCat);
     setCustomParams(null);
+    setCustomGraph(null);
+    setCustomStartVertex(null);
     if (newCat === 'TREE') {
       setActiveAlgorithmId('avl-insert');
       setActivePresetId('avl-insert-standard');
@@ -157,6 +180,8 @@ export function App() {
   const handleSelectAlgorithm = (algoId: string) => {
     setActiveAlgorithmId(algoId);
     setCustomParams(null);
+    setCustomGraph(null);
+    setCustomStartVertex(null);
     const matching = PRESET_LIBRARY.find((p) => p.algorithm === algoId);
     if (matching) {
       setActivePresetId(matching.id);
@@ -167,14 +192,32 @@ export function App() {
     setActivePresetId(preset.id);
     setActiveAlgorithmId(preset.algorithm);
     setCustomParams(null);
+    setCustomGraph(null);
+    setCustomStartVertex(null);
   };
 
+  // Tree Custom Keys Handler
   const handleSubmitCustomKeys = (
     keys: number[],
     deleteKeys?: number[],
     searchKey?: number
   ) => {
     setCustomParams({ keys, deleteKeys, searchKey });
+    setCurrentStepIndex(0);
+  };
+
+  // Graph Custom Graph Handler
+  const handleUpdateCustomGraph = (graph: GraphData, startVertex?: string) => {
+    setCustomGraph(graph);
+    if (startVertex) {
+      setCustomStartVertex(startVertex);
+    }
+    setCurrentStepIndex(0);
+  };
+
+  const handleResetGraph = () => {
+    setCustomGraph(null);
+    setCustomStartVertex(null);
     setCurrentStepIndex(0);
   };
 
@@ -211,6 +254,18 @@ export function App() {
             currentDeleteKeys={activeDeleteKeys}
             currentSearchKey={activeSearchKey}
             onApplyOperation={handleSubmitCustomKeys}
+          />
+        )}
+
+        {/* Interactive Quick Operations Bar for Graphs (Add Vertices, Connect Edges, Select Start Node) */}
+        {category === 'GRAPH' && activeGraph && (
+          <QuickGraphOpsBar
+            algorithmId={activeAlgorithmId}
+            graph={activeGraph}
+            startVertex={activeStartVertex}
+            onUpdateGraph={handleUpdateCustomGraph}
+            onResetToDefault={handleResetGraph}
+            onOpenModal={() => setIsCustomModalOpen(true)}
           />
         )}
 
@@ -325,14 +380,26 @@ export function App() {
         />
       </div>
 
-      {/* Custom Key Sequence Input Modal */}
-      <CustomInputModal
-        isOpen={isCustomModalOpen}
-        algorithmName={currentSnapshot?.algorithmName || 'Algorithm'}
-        isTree={category === 'TREE'}
-        onClose={() => setIsCustomModalOpen(false)}
-        onSubmitKeys={handleSubmitCustomKeys}
-      />
+      {/* Custom Key Sequence / Custom Graph Modals */}
+      {category === 'GRAPH' ? (
+        <CustomGraphModal
+          isOpen={isCustomModalOpen}
+          algorithmId={activeAlgorithmId}
+          algorithmName={currentSnapshot?.algorithmName || 'Graph Algorithm'}
+          currentGraph={activeGraph}
+          currentStartVertex={activeStartVertex}
+          onClose={() => setIsCustomModalOpen(false)}
+          onSubmitGraph={handleUpdateCustomGraph}
+        />
+      ) : (
+        <CustomInputModal
+          isOpen={isCustomModalOpen}
+          algorithmName={currentSnapshot?.algorithmName || 'Algorithm'}
+          isTree={true}
+          onClose={() => setIsCustomModalOpen(false)}
+          onSubmitKeys={handleSubmitCustomKeys}
+        />
+      )}
     </div>
   );
 }

@@ -55,16 +55,14 @@ export const PresetsBar: React.FC<PresetsBarProps> = ({
         </div>
 
         {/* Custom Input Trigger */}
-        {isTree && (
-          <button
-            onClick={onOpenCustomModal}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-serif font-semibold bg-[#FAF8F5] text-[#59524A] hover:text-[#8C2D19] border border-[#C4B59D] hover:border-[#8C2D19] transition-all self-start sm:self-auto shrink-0 shadow-2xs"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            <span>Custom Sequence</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-[#847B72]" />
-          </button>
-        )}
+        <button
+          onClick={onOpenCustomModal}
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-serif font-semibold bg-[#FAF8F5] text-[#59524A] hover:text-[#8C2D19] border border-[#C4B59D] hover:border-[#8C2D19] transition-all self-start sm:self-auto shrink-0 shadow-2xs"
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          <span>{isTree ? 'Custom Sequence' : 'Custom Graph'}</span>
+          <ArrowUpRight className="w-3.5 h-3.5 text-[#847B72]" />
+        </button>
       </div>
     </div>
   );
