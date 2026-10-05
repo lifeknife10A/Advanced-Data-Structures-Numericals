@@ -317,6 +317,7 @@ export function App() {
               activeNodeIds={currentSnapshot?.activeNodeIds}
               activeEdgeIds={currentSnapshot?.activeEdgeIds}
               algorithmName={currentSnapshot?.algorithmName}
+              isWeighted={activeAlgorithmId === 'dijkstra' || activeAlgorithmId === 'kruskal' || activeAlgorithmId === 'prim'}
               onUpdateVertices={handleUpdateVerticesPositions}
             />
           )}

@@ -9,6 +9,7 @@ interface GraphCanvasProps {
   activeNodeIds?: string[];
   activeEdgeIds?: string[];
   algorithmName?: string;
+  isWeighted?: boolean;
   onUpdateVertices?: (vertices: GraphVertex[]) => void;
 }
 
@@ -18,6 +19,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   activeNodeIds = [],
   activeEdgeIds = [],
   algorithmName = '',
+  isWeighted = false,
   onUpdateVertices,
 }) => {
   const canvasWidth = 900;
@@ -319,8 +321,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                   markerEnd={edge.directed ? (isEdgeActive ? 'url(#arrowhead-active)' : 'url(#arrowhead)') : undefined}
                 />
 
-                {/* Edge Weight Pill (if weighted) */}
-                {edge.weight !== undefined && (
+                {/* Edge Weight Pill (Only for weighted algorithms like Dijkstra, Kruskal, Prim) */}
+                {isWeighted && edge.weight !== undefined && (
                   <g>
                     <rect
                       x={midX - 16}

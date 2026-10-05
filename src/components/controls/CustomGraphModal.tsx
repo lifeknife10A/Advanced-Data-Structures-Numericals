@@ -65,17 +65,17 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
       if (currentGraph.edges && currentGraph.edges.length > 0) {
         const lines = currentGraph.edges.map((e) => {
           const arrow = e.directed ? '->' : '-';
-          const weightStr = e.weight !== undefined ? `: ${e.weight}` : '';
+          const weightStr = isWeightedAlgo && e.weight !== undefined ? `: ${e.weight}` : '';
           return `${e.source}${arrow}${e.target}${weightStr}`;
         });
         setTextInput(lines.join(', '));
       } else if (currentGraph.vertices && currentGraph.vertices.length > 0) {
         setTextInput(`V: ${currentGraph.vertices.map((v) => v.id).join(', ')}`);
       } else {
-        setTextInput('A-B: 4, A-C: 2, B-C: 1, B-D: 5, C-D: 8, D-E: 2');
+        setTextInput(isWeightedAlgo ? 'A-B: 4, A-C: 2, B-C: 1, B-D: 5, C-D: 8, D-E: 2' : 'A-B, A-C, B-D, C-F, D-G');
       }
     }
-  }, [isOpen, currentGraph, currentStartVertex]);
+  }, [isOpen, currentGraph, currentStartVertex, isWeightedAlgo]);
 
   if (!isOpen) return null;
 
@@ -88,7 +88,7 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
 
     const lines = templateGraph.edges.map((e) => {
       const arrow = e.directed ? '->' : '-';
-      const weightStr = e.weight !== undefined ? `: ${e.weight}` : '';
+      const weightStr = isWeightedAlgo && e.weight !== undefined ? `: ${e.weight}` : '';
       return `${e.source}${arrow}${e.target}${weightStr}`;
     });
     setTextInput(lines.join(', '));
@@ -138,7 +138,7 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
         vertexSet.add(v);
 
         const isDirected = arrow === '->' || arrow === '=>' || isDirectedDefault;
-        const weight = wStr !== undefined ? Number(wStr) : isWeightedAlgo ? 1 : undefined;
+        const weight = isWeightedAlgo ? (wStr !== undefined ? Number(wStr) : 1) : undefined;
 
         edges.push({
           id: `e-${u}-${v}-${edges.length}`,
@@ -154,7 +154,7 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
         if (singleVMatch) {
           vertexSet.add(singleVMatch[0].trim());
         } else {
-          throw new Error(`Unrecognized edge or vertex syntax: "${token}". Expected format: A-B: 4 or A->B`);
+          throw new Error(`Unrecognized edge or vertex syntax: "${token}". Expected format: ${isWeightedAlgo ? 'A-B: 4 or A->B: 4' : 'A-B or A->B'}`);
         }
       }
     }
@@ -260,7 +260,7 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
       updatedVertices.push({ id: tgt, label: tgt, x: 0, y: 0, state: 'unvisited' });
     }
 
-    const weightNum = isWeightedAlgo ? (Number(newEdgeWeight) || 1) : (newEdgeWeight.trim() ? Number(newEdgeWeight) : undefined);
+    const weightNum = isWeightedAlgo ? (Number(newEdgeWeight) || 1) : undefined;
     const edgeId = `e-${src}-${tgt}-${Date.now()}`;
 
     const cleanEdges = visualEdges.filter(
@@ -401,20 +401,34 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
                   rows={5}
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
-                  placeholder="e.g. A-B: 4, A-C: 2, B-C: 1, B-D: 5, C-D: 8, D-E: 2 (or 1->2, 1->3, 2->4)"
+                  placeholder={
+                    isWeightedAlgo
+                      ? "e.g. A-B: 4, A-C: 2, B-C: 1, B-D: 5, C-D: 8, D-E: 2 (or 1->2: 4, 1->3: 2)"
+                      : "e.g. A-B, A-C, B-D, C-F, D-G (or 1->2, 1->3, 2->4, 3->4)"
+                  }
                   className="w-full px-3 py-2 border border-[#C4B59D] rounded-lg bg-[#FAF8F5] text-[#221F1E] font-mono text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-[#8C2D19]/40 leading-relaxed"
                 />
                 <div className="mt-1.5 p-2.5 rounded-lg bg-[#F4EFE6] border border-[#E2D8C7] text-[11px] font-serif text-[#59524A] space-y-1">
                   <p className="font-bold text-[#221F1E] m-0">Supported Question Syntax Examples:</p>
-                  <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
-                    • Undirected Weighted: <span className="text-[#221F1E]">A-B: 4, A-C: 2, B-D: 5</span>
-                  </p>
-                  <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
-                    • Directed Weighted: <span className="text-[#221F1E]">A-&gt;B: 4, A-&gt;C: 2, B-&gt;D: 5</span>
-                  </p>
-                  <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
-                    • Numeric / Unweighted DAG: <span className="text-[#221F1E]">1-&gt;2, 1-&gt;3, 2-&gt;4, 3-&gt;4</span>
-                  </p>
+                  {isWeightedAlgo ? (
+                    <>
+                      <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
+                        • Undirected Weighted: <span className="text-[#221F1E]">A-B: 4, A-C: 2, B-D: 5</span>
+                      </p>
+                      <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
+                        • Directed Weighted: <span className="text-[#221F1E]">A-&gt;B: 4, A-&gt;C: 2, B-&gt;D: 5</span>
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
+                        • Undirected Traversal (BFS/DFS): <span className="text-[#221F1E]">A-B, A-C, B-D, C-F, D-G</span>
+                      </p>
+                      <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
+                        • Directed Traversal / DAG: <span className="text-[#221F1E]">1-&gt;2, 1-&gt;3, 2-&gt;4, 3-&gt;4</span>
+                      </p>
+                    </>
+                  )}
                   <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
                     • Standalone Vertices: <span className="text-[#221F1E]">V: A, B, C, D, E, F</span>
                   </p>
@@ -561,15 +575,17 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
                     ))}
                   </select>
 
-                  <div className="flex items-center gap-1">
-                    <span className="text-[11px] font-serif text-[#59524A]">Weight:</span>
-                    <input
-                      type="number"
-                      value={newEdgeWeight}
-                      onChange={(e) => setNewEdgeWeight(e.target.value)}
-                      className="w-16 px-2 py-1.5 text-xs font-mono bg-[#FAF8F5] border border-[#C4B59D] rounded text-[#221F1E] text-center"
-                    />
-                  </div>
+                  {isWeightedAlgo && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-serif text-[#59524A]">Weight:</span>
+                      <input
+                        type="number"
+                        value={newEdgeWeight}
+                        onChange={(e) => setNewEdgeWeight(e.target.value)}
+                        className="w-16 px-2 py-1.5 text-xs font-mono bg-[#FAF8F5] border border-[#C4B59D] rounded text-[#221F1E] text-center"
+                      />
+                    </div>
+                  )}
 
                   <label className="flex items-center gap-1 text-xs font-serif text-[#59524A] cursor-pointer">
                     <input
@@ -598,7 +614,7 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
                       <th className="py-1.5 px-3">From</th>
                       <th className="py-1.5 px-3">To</th>
                       <th className="py-1.5 px-3">Type</th>
-                      <th className="py-1.5 px-3">Weight</th>
+                      {isWeightedAlgo && <th className="py-1.5 px-3">Weight</th>}
                       <th className="py-1.5 px-3 text-right">Action</th>
                     </tr>
                   </thead>
@@ -608,19 +624,21 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
                         <td className="py-1 px-3 font-mono font-bold text-[#221F1E]">{e.source}</td>
                         <td className="py-1 px-3 font-mono font-bold text-[#221F1E]">{e.target}</td>
                         <td className="py-1 px-3 font-mono">{e.directed ? 'Directed (→)' : 'Undirected (⇄)'}</td>
-                        <td className="py-1 px-3 font-mono">
-                          <input
-                            type="number"
-                            value={e.weight ?? ''}
-                            onChange={(ev) => {
-                              const val = ev.target.value ? Number(ev.target.value) : undefined;
-                              const copy = [...visualEdges];
-                              copy[idx].weight = val;
-                              setVisualEdges(copy);
-                            }}
-                            className="w-16 px-1.5 py-0.5 border border-[#C4B59D] rounded bg-[#FAF8F5] text-center font-mono"
-                          />
-                        </td>
+                        {isWeightedAlgo && (
+                          <td className="py-1 px-3 font-mono">
+                            <input
+                              type="number"
+                              value={e.weight ?? ''}
+                              onChange={(ev) => {
+                                const val = ev.target.value ? Number(ev.target.value) : undefined;
+                                const copy = [...visualEdges];
+                                copy[idx].weight = val;
+                                setVisualEdges(copy);
+                              }}
+                              className="w-16 px-1.5 py-0.5 border border-[#C4B59D] rounded bg-[#FAF8F5] text-center font-mono"
+                            />
+                          </td>
+                        )}
                         <td className="py-1 px-3 text-right">
                           <button
                             type="button"
@@ -635,7 +653,7 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
                     ))}
                     {visualEdges.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-3 px-3 text-center text-[#847B72] italic">
+                        <td colSpan={isWeightedAlgo ? 5 : 4} className="py-3 px-3 text-center text-[#847B72] italic">
                           No edges connected yet.
                         </td>
                       </tr>

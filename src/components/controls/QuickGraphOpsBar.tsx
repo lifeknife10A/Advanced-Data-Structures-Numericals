@@ -103,7 +103,7 @@ export const QuickGraphOpsBar: React.FC<QuickGraphOpsBarProps> = ({
       updatedVertices.push({ id: tgt, label: tgt, x: 0, y: 0, state: 'unvisited' });
     }
 
-    const weightNum = isWeightedAlgo ? (Number(edgeWeight) || 1) : (edgeWeight.trim() ? Number(edgeWeight) : undefined);
+    const weightNum = isWeightedAlgo ? (Number(edgeWeight) || 1) : undefined;
     const edgeId = `e-${src}-${tgt}-${Date.now()}`;
 
     // Remove existing edge between same endpoints if present
@@ -249,17 +249,19 @@ export const QuickGraphOpsBar: React.FC<QuickGraphOpsBarProps> = ({
             ))}
           </select>
 
-          {/* Weight Input (For Dijkstra, Kruskal, Prim, or optional) */}
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-serif font-semibold text-[#59524A]">Weight:</span>
-            <input
-              type="number"
-              value={edgeWeight}
-              onChange={(e) => setEdgeWeight(e.target.value)}
-              placeholder="wt"
-              className="w-14 px-2 py-1.5 text-xs font-mono bg-[#FAF8F5] border border-[#C4B59D] rounded-lg text-[#221F1E] text-center"
-            />
-          </div>
+          {/* Weight Input (Only for Dijkstra, Kruskal, Prim) */}
+          {isWeightedAlgo && (
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] font-serif font-semibold text-[#59524A]">Weight:</span>
+              <input
+                type="number"
+                value={edgeWeight}
+                onChange={(e) => setEdgeWeight(e.target.value)}
+                placeholder="wt"
+                className="w-14 px-2 py-1.5 text-xs font-mono bg-[#FAF8F5] border border-[#C4B59D] rounded-lg text-[#221F1E] text-center"
+              />
+            </div>
+          )}
 
           {/* Directed Checkbox */}
           <label className="flex items-center gap-1 text-xs font-serif text-[#59524A] cursor-pointer select-none">
@@ -322,7 +324,7 @@ export const QuickGraphOpsBar: React.FC<QuickGraphOpsBarProps> = ({
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#F4EFE6] border border-[#D4C6B1] text-xs font-mono text-[#221F1E]"
             >
               <span>
-                {e.source} {e.directed ? '→' : '—'} {e.target} {e.weight !== undefined ? `(${e.weight})` : ''}
+                {e.source} {e.directed ? '→' : '—'} {e.target} {isWeightedAlgo && e.weight !== undefined ? `(${e.weight})` : ''}
               </span>
               <button
                 type="button"
