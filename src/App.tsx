@@ -245,6 +245,7 @@ export function App() {
               activeNodeIds={currentSnapshot?.activeNodeIds}
               isTwoThree={isTwoThree}
               algorithmName={currentSnapshot?.algorithmName}
+              rotationMeta={currentSnapshot?.rotationMeta}
             />
           ) : (
             <GraphCanvas

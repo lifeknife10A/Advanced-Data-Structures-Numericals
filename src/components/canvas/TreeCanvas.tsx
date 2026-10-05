@@ -7,6 +7,16 @@ interface TreeCanvasProps {
   activeNodeIds?: string[];
   isTwoThree?: boolean;
   algorithmName?: string;
+  rotationMeta?: {
+    type: 'LL' | 'RR' | 'LR' | 'RL' | 'ZIG' | 'ZIG_ZIG' | 'ZIG_ZAG' | 'SPLIT_PROMOTE' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'RECOLOR';
+    pivotKey: number;
+    elevatingKey?: number;
+    direction?: 'clockwise' | 'counter-clockwise';
+    subPhase?: string;
+    stepNumberLabel?: string;
+    transferredSubtree?: string;
+    description: string;
+  };
 }
 
 export const TreeCanvas: React.FC<TreeCanvasProps> = ({
@@ -14,6 +24,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
   activeNodeIds = [],
   isTwoThree = false,
   algorithmName = '',
+  rotationMeta,
 }) => {
   const canvasWidth = 1000;
   const canvasHeight = 580;
@@ -25,14 +36,23 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
   }, [tree, isTwoThree]);
 
   // Flatten nodes and edges for SVG rendering
-  const { nodes, edges } = useMemo(() => {
+  const { nodes, edges, nodeMap } = useMemo(() => {
     const nodeList: TreeNode[] = [];
     const edgeList: { id: string; x1: number; y1: number; x2: number; y2: number; label?: string }[] = [];
+    const map = new Map<number, { x: number; y: number; node: TreeNode }>();
 
-    if (!positionedTree) return { nodes: nodeList, edges: edgeList };
+    if (!positionedTree) return { nodes: nodeList, edges: edgeList, nodeMap: map };
 
     function traverse(node: TreeNode) {
       nodeList.push(node);
+      if (node.x !== undefined && node.y !== undefined) {
+        map.set(node.key, { x: node.x, y: node.y, node });
+        if (node.keys) {
+          for (const k of node.keys) {
+            map.set(k, { x: node.x, y: node.y, node });
+          }
+        }
+      }
 
       // Left Child
       if (node.left && node.left.x !== undefined && node.left.y !== undefined) {
@@ -75,8 +95,35 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
     }
 
     traverse(positionedTree);
-    return { nodes: nodeList, edges: edgeList };
+    return { nodes: nodeList, edges: edgeList, nodeMap: map };
   }, [positionedTree, isTwoThree]);
+
+  // Compute rotation curve path if rotationMeta is present
+  const rotationPath = useMemo(() => {
+    if (!rotationMeta || !rotationMeta.elevatingKey || !rotationMeta.pivotKey) return null;
+    const pivotPos = nodeMap.get(rotationMeta.pivotKey);
+    const elevatingPos = nodeMap.get(rotationMeta.elevatingKey);
+
+    if (!pivotPos || !elevatingPos) return null;
+
+    const x1 = elevatingPos.x;
+    const y1 = elevatingPos.y;
+    const x2 = pivotPos.x;
+    const y2 = pivotPos.y;
+
+    // Curved control point for rotation arc
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+    const offset = rotationMeta.direction === 'clockwise' ? -45 : 45;
+    const ctrlX = midX + offset;
+    const ctrlY = midY - 25;
+
+    return {
+      d: `M ${x1} ${y1} Q ${ctrlX} ${ctrlY} ${x2} ${y2}`,
+      midX: ctrlX,
+      midY: ctrlY,
+    };
+  }, [rotationMeta, nodeMap]);
 
   if (!tree) {
     return (
@@ -89,6 +136,31 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
 
   return (
     <div className="w-full h-[580px] bg-[#FAF8F5] border border-[#E2D8C7] rounded-2xl overflow-hidden relative shadow-inner">
+      {/* Top Floating Rotation Mechanism Banner */}
+      {rotationMeta && (
+        <div className="absolute top-4 left-4 z-20 max-w-md bg-[#FAF8F5]/95 backdrop-blur-md border-2 border-[#8C2D19] rounded-xl p-3 shadow-lg transition-all animate-fadeIn">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#8C2D19] animate-ping" />
+            <span className="text-xs font-mono font-bold text-[#8C2D19] uppercase tracking-wider">
+              {rotationMeta.type} Rotation Mechanism
+            </span>
+            {rotationMeta.direction && (
+              <span className="text-xs font-serif italic text-[#59524A]">
+                ({rotationMeta.direction === 'clockwise' ? '⟳ Clockwise' : '⟲ Counter-Clockwise'})
+              </span>
+            )}
+          </div>
+          <p className="text-xs font-serif text-[#221F1E] font-medium leading-relaxed">
+            {rotationMeta.description}
+          </p>
+          {rotationMeta.transferredSubtree && (
+            <div className="mt-1.5 pt-1.5 border-t border-[#E2D8C7] text-[11px] font-mono text-[#8C6D3B]">
+              ↳ {rotationMeta.transferredSubtree}
+            </div>
+          )}
+        </div>
+      )}
+
       <svg
         viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
         className="w-full h-full select-none"
@@ -98,6 +170,18 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
           <filter id="champagne-node-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2.5" stdDeviation="3" floodColor="#221F1E" floodOpacity="0.12" />
           </filter>
+
+          {/* Arrowhead marker for rotation indicator */}
+          <marker
+            id="rotation-arrowhead"
+            markerWidth="8"
+            markerHeight="8"
+            refX="6"
+            refY="4"
+            orient="auto"
+          >
+            <path d="M 0 0 L 8 4 L 0 8 z" fill="#8C2D19" />
+          </marker>
         </defs>
 
         {/* Tree Edges */}
@@ -131,11 +215,47 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
           ))}
         </g>
 
+        {/* Dynamic Rotation Arc & Direction Indicator */}
+        {rotationPath && (
+          <g className="rotation-arc animate-pulse">
+            <path
+              d={rotationPath.d}
+              fill="none"
+              stroke="#8C2D19"
+              strokeWidth="2.8"
+              strokeDasharray="6 3"
+              markerEnd="url(#rotation-arrowhead)"
+            />
+            <circle
+              cx={rotationPath.midX}
+              cy={rotationPath.midY}
+              r="12"
+              fill="#FAF8F5"
+              stroke="#8C2D19"
+              strokeWidth="1.5"
+            />
+            <text
+              x={rotationPath.midX}
+              y={rotationPath.midY + 4}
+              fill="#8C2D19"
+              fontSize="12"
+              fontWeight="bold"
+              fontFamily="JetBrains Mono, monospace"
+              textAnchor="middle"
+            >
+              {rotationMeta?.direction === 'clockwise' ? '↷' : '↶'}
+            </text>
+          </g>
+        )}
+
         {/* Tree Nodes */}
         <g className="nodes">
           {nodes.map((node) => {
             const isHighlighted =
               node.isHighlighted || (node.id && activeNodeIds.includes(node.id));
+
+            const isPivot = rotationMeta && rotationMeta.pivotKey === node.key;
+            const isElevating = rotationMeta && rotationMeta.elevatingKey === node.key;
 
             // 2-3 Tree Node Rendering (Multi-key Box)
             if (isTwoThree || (node.keys && node.keys.length > 0)) {
@@ -277,6 +397,33 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
                   >
                     {isRed ? 'RED' : 'BLK'}
                   </text>
+
+                  {/* Role Tag Pill (Pivot / Elevating) */}
+                  {(isPivot || isElevating) && (
+                    <g>
+                      <rect
+                        x={(node.x ?? 0) - 30}
+                        y={(node.y ?? 0) + radius + 4}
+                        width="60"
+                        height="15"
+                        rx="4"
+                        fill="#FAF8F5"
+                        stroke="#8C2D19"
+                        strokeWidth="1.2"
+                      />
+                      <text
+                        x={node.x}
+                        y={(node.y ?? 0) + radius + 15}
+                        fill="#8C2D19"
+                        fontSize="9.5"
+                        fontWeight="bold"
+                        fontFamily="JetBrains Mono, monospace"
+                        textAnchor="middle"
+                      >
+                        {isPivot ? 'PIVOT (G)' : 'ELEVATING'}
+                      </text>
+                    </g>
+                  )}
                 </g>
               );
             }
@@ -352,6 +499,33 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
                       textAnchor="middle"
                     >
                       BF: {node.balanceFactor > 0 ? `+${node.balanceFactor}` : node.balanceFactor}
+                    </text>
+                  </g>
+                )}
+
+                {/* Role Tag Pill (Pivot / Elevating) */}
+                {(isPivot || isElevating) && (
+                  <g>
+                    <rect
+                      x={(node.x ?? 0) - 34}
+                      y={(node.y ?? 0) + radius + 4}
+                      width="68"
+                      height="15"
+                      rx="4"
+                      fill="#FAF8F5"
+                      stroke="#8C2D19"
+                      strokeWidth="1.2"
+                    />
+                    <text
+                      x={node.x}
+                      y={(node.y ?? 0) + radius + 15}
+                      fill="#8C2D19"
+                      fontSize="9.5"
+                      fontWeight="bold"
+                      fontFamily="JetBrains Mono, monospace"
+                      textAnchor="middle"
+                    >
+                      {isPivot ? 'PIVOT (A)' : 'ELEVATING (B)'}
                     </text>
                   </g>
                 )}

@@ -1,7 +1,7 @@
 import React from 'react';
 import katex from 'katex';
 import { StepSnapshot } from '../../types/animation';
-import { BookOpen, CheckCircle2, Info } from 'lucide-react';
+import { BookOpen, CheckCircle2, Info, RefreshCw } from 'lucide-react';
 
 interface DerivationCardProps {
   snapshot: StepSnapshot | null;
@@ -60,6 +60,33 @@ export const DerivationCard: React.FC<DerivationCardProps> = ({ snapshot }) => {
           {snapshot.statusBadge.text}
         </span>
       </div>
+
+      {/* Rotation Mechanics Box (When rotation is in progress) */}
+      {snapshot.rotationMeta && (
+        <div className="bg-[#FAF0EE] border-2 border-[#8C2D19] rounded-xl p-4.5 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-[#E8C0B8]">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-[#8C2D19] animate-spin" style={{ animationDuration: '6s' }} />
+              <span className="text-xs sm:text-sm font-mono font-bold text-[#8C2D19] uppercase tracking-wider">
+                {snapshot.rotationMeta.type} Rotation Mechanism
+              </span>
+            </div>
+            {snapshot.rotationMeta.direction && (
+              <span className="text-xs font-serif font-bold text-[#8C2D19] px-2.5 py-0.5 rounded bg-[#FAF8F5] border border-[#E8C0B8]">
+                {snapshot.rotationMeta.direction === 'clockwise' ? '⟳ Clockwise (Right Rotate)' : '⟲ Counter-Clockwise (Left Rotate)'}
+              </span>
+            )}
+          </div>
+          <p className="text-sm font-serif text-[#221F1E] leading-relaxed m-0 font-medium">
+            {snapshot.rotationMeta.description}
+          </p>
+          {snapshot.rotationMeta.transferredSubtree && (
+            <div className="mt-2.5 pt-2 border-t border-[#E8C0B8] text-xs font-mono text-[#8C2D19] font-semibold">
+              ↳ Subtree Transfer: {snapshot.rotationMeta.transferredSubtree}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* KaTeX Mathematical Derivation Box */}
       {snapshot.mathematicalDerivation && (

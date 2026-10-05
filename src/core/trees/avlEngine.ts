@@ -65,32 +65,505 @@ function collectTableRows(root: TreeNode | null | undefined): TraceTableRow[] {
   return rows;
 }
 
-// Rotations
-function rotateRight(y: TreeNode): TreeNode {
-  const x = y.left!;
-  const T2 = x.right;
+// --------------------------------------------------------------------------
+// Multi-Step Educational Rotation Handlers (LL, RR, LR, RL)
+// --------------------------------------------------------------------------
 
-  x.right = y;
-  y.left = T2;
+function executeAndRecordLL(
+  A: TreeNode,
+  steps: StepSnapshot[],
+  stepPrefix: string,
+  isDeletion: boolean = false
+): TreeNode {
+  const B = A.left!;
+  const T2 = B.right;
+  const alg = isDeletion ? 'AVL Tree Deletion' : 'AVL Tree Insertion';
 
-  updateNodeMetrics(y);
-  updateNodeMetrics(x);
+  // Sub-step 1: Detection & Imbalance Analysis
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.1: LL Imbalance Detected at Node ${A.key}`,
+    subtitle: `BF(${A.key}) = +2, BF(${B.key}) = ${B.balanceFactor >= 0 ? '+' : ''}${B.balanceFactor} (Left-Left Violation)`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Node ${A.key} has Balance Factor +2 (left-heavy), and its left child ${B.key} has BF ≥ 0. This is a Left-Left (LL) violation. A Single Right Rotation on Node ${A.key} with Pivot ${B.key} is required.`,
+    mathematicalDerivation: `\\text{BF}(${A.key}) = h_L - h_R = ${getHeight(A.left)} - ${getHeight(A.right)} = +2 \\implies \\text{LL Case: RightRotate}(${A.key})`,
+    examRule: 'LL Case Rule: Perform a Single Right Rotation on the imbalanced parent. Left child rises to root.',
+    statusBadge: { text: 'LL Case: Detected', variant: 'danger' },
+    rotationMeta: {
+      type: 'LL',
+      pivotKey: A.key,
+      elevatingKey: B.key,
+      direction: 'clockwise',
+      subPhase: 'DETECTION',
+      stepNumberLabel: `${stepPrefix}.1`,
+      description: `Imbalance at Node ${A.key} (BF = +2). Pivot child is ${B.key}.`,
+    },
+    treeState: cloneTree(A),
+    activeNodeIds: [A.id, B.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(A),
+  });
 
-  return x;
+  // Sub-step 2: Subtree Reparenting & Pointer Shift Explanation
+  A.left = T2;
+  B.right = A;
+  updateNodeMetrics(A);
+  updateNodeMetrics(B);
+
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.2: Right Rotation Execution & Subtree Reparenting`,
+    subtitle: `Elevating Pivot ${B.key} → Root, Demoting ${A.key} → Right Child of ${B.key}`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Detailed Right Rotation Mechanics:
+1. Elevate Pivot ${B.key}: Node ${B.key} rises to replace Node ${A.key} as the subtree root.
+2. Demote Node ${A.key}: Node ${A.key} moves down to become the RIGHT child of ${B.key} (since ${A.key} > ${B.key}).
+3. Reparent Subtree T2: Node ${B.key}'s right subtree T2 (containing keys between ${B.key} and ${A.key}) is re-attached as the LEFT child of Node ${A.key}.
+4. BST Order Preserved: Subtree(B.left) < ${B.key} < T2 < ${A.key} < Subtree(A.right).`,
+    mathematicalDerivation: `${B.key}.\\text{right} \\leftarrow ${A.key}, \\quad ${A.key}.\\text{left} \\leftarrow T_2 \\implies \\text{BST Invariant Strictly Maintained}`,
+    examRule: 'Exam Rubric: Explicitly show where subtree T2 transfers (from pivot right to demoted node left).',
+    statusBadge: { text: 'Right Rotate: Executed', variant: 'warning' },
+    rotationMeta: {
+      type: 'LL',
+      pivotKey: A.key,
+      elevatingKey: B.key,
+      direction: 'clockwise',
+      subPhase: 'ROTATION_EXECUTION',
+      stepNumberLabel: `${stepPrefix}.2`,
+      transferredSubtree: `Subtree T2 reparented to left of ${A.key}`,
+      description: `Elevated ${B.key}, demoted ${A.key} to right child, reparented T2 to left of ${A.key}`,
+    },
+    treeState: cloneTree(B),
+    activeNodeIds: [B.id, A.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(B),
+  });
+
+  // Sub-step 3: Balance Restored
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.3: LL Rotation Complete & Invariant Restored`,
+    subtitle: `New Subtree Root: ${B.key} (BF: ${B.balanceFactor}), Left: ${B.left ? B.left.key : '—'}, Right: ${A.key} (BF: ${A.balanceFactor})`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Right rotation complete. Heights and balance factors recalculated:\n- h(${A.key}) = ${A.height}, BF(${A.key}) = ${A.balanceFactor}\n- h(${B.key}) = ${B.height}, BF(${B.key}) = ${B.balanceFactor}\nBoth nodes now satisfy |BF| ≤ 1.`,
+    mathematicalDerivation: `\\text{BF}(${A.key}) = ${A.balanceFactor}, \\; \\text{BF}(${B.key}) = ${B.balanceFactor} \\implies \\text{AVL Invariant Satisfied.}`,
+    examRule: 'Final Step: Mark new heights and BF values next to each node on the answer sheet.',
+    statusBadge: { text: 'LL Balanced', variant: 'success' },
+    rotationMeta: {
+      type: 'LL',
+      pivotKey: A.key,
+      elevatingKey: B.key,
+      direction: 'clockwise',
+      subPhase: 'RECOLORED_BALANCED',
+      stepNumberLabel: `${stepPrefix}.3`,
+      description: `Balanced tree at root ${B.key}`,
+    },
+    treeState: cloneTree(B),
+    activeNodeIds: [B.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(B),
+  });
+
+  return B;
 }
 
-function rotateLeft(x: TreeNode): TreeNode {
-  const y = x.right!;
-  const T2 = y.left;
+function executeAndRecordRR(
+  A: TreeNode,
+  steps: StepSnapshot[],
+  stepPrefix: string,
+  isDeletion: boolean = false
+): TreeNode {
+  const B = A.right!;
+  const T2 = B.left;
+  const alg = isDeletion ? 'AVL Tree Deletion' : 'AVL Tree Insertion';
 
-  y.left = x;
-  x.right = T2;
+  // Sub-step 1: Detection
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.1: RR Imbalance Detected at Node ${A.key}`,
+    subtitle: `BF(${A.key}) = -2, BF(${B.key}) = ${B.balanceFactor >= 0 ? '+' : ''}${B.balanceFactor} (Right-Right Violation)`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Node ${A.key} has Balance Factor -2 (right-heavy), and its right child ${B.key} has BF ≤ 0. This is a Right-Right (RR) violation. A Single Left Rotation on Node ${A.key} with Pivot ${B.key} is required.`,
+    mathematicalDerivation: `\\text{BF}(${A.key}) = h_L - h_R = ${getHeight(A.left)} - ${getHeight(A.right)} = -2 \\implies \\text{RR Case: LeftRotate}(${A.key})`,
+    examRule: 'RR Case Rule: Perform a Single Left Rotation on imbalanced parent. Right child rises to root.',
+    statusBadge: { text: 'RR Case: Detected', variant: 'danger' },
+    rotationMeta: {
+      type: 'RR',
+      pivotKey: A.key,
+      elevatingKey: B.key,
+      direction: 'counter-clockwise',
+      subPhase: 'DETECTION',
+      stepNumberLabel: `${stepPrefix}.1`,
+      description: `Imbalance at Node ${A.key} (BF = -2). Pivot child is ${B.key}.`,
+    },
+    treeState: cloneTree(A),
+    activeNodeIds: [A.id, B.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(A),
+  });
 
-  updateNodeMetrics(x);
-  updateNodeMetrics(y);
+  // Sub-step 2: Reparenting & Left Rotation Execution
+  A.right = T2;
+  B.left = A;
+  updateNodeMetrics(A);
+  updateNodeMetrics(B);
 
-  return y;
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.2: Left Rotation Execution & Subtree Reparenting`,
+    subtitle: `Elevating Pivot ${B.key} → Root, Demoting ${A.key} → Left Child of ${B.key}`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Detailed Left Rotation Mechanics:
+1. Elevate Pivot ${B.key}: Node ${B.key} rises to replace Node ${A.key} as the subtree root.
+2. Demote Node ${A.key}: Node ${A.key} moves down to become the LEFT child of ${B.key} (since ${A.key} < ${B.key}).
+3. Reparent Subtree T2: Node ${B.key}'s left subtree T2 (containing keys between ${A.key} and ${B.key}) is re-attached as the RIGHT child of Node ${A.key}.
+4. BST Order Preserved: Subtree(A.left) < ${A.key} < T2 < ${B.key} < Subtree(B.right).`,
+    mathematicalDerivation: `${B.key}.\\text{left} \\leftarrow ${A.key}, \\quad ${A.key}.\\text{right} \\leftarrow T_2 \\implies \\text{BST Order Preserved}`,
+    examRule: 'Exam Rubric: Subtree T2 transfers from pivot left to old-root right.',
+    statusBadge: { text: 'Left Rotate: Executed', variant: 'warning' },
+    rotationMeta: {
+      type: 'RR',
+      pivotKey: A.key,
+      elevatingKey: B.key,
+      direction: 'counter-clockwise',
+      subPhase: 'ROTATION_EXECUTION',
+      stepNumberLabel: `${stepPrefix}.2`,
+      transferredSubtree: `Subtree T2 reparented to right of ${A.key}`,
+      description: `Elevated ${B.key}, demoted ${A.key} to left child, reparented T2 to right of ${A.key}`,
+    },
+    treeState: cloneTree(B),
+    activeNodeIds: [B.id, A.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(B),
+  });
+
+  // Sub-step 3: Balance Restored
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.3: RR Rotation Complete & Invariant Restored`,
+    subtitle: `New Subtree Root: ${B.key} (BF: ${B.balanceFactor}), Left: ${A.key} (BF: ${A.balanceFactor}), Right: ${B.right ? B.right.key : '—'}`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Left rotation complete. Heights and balance factors recalculated:\n- h(${A.key}) = ${A.height}, BF(${A.key}) = ${A.balanceFactor}\n- h(${B.key}) = ${B.height}, BF(${B.key}) = ${B.balanceFactor}\nAll nodes now satisfy |BF| ≤ 1.`,
+    mathematicalDerivation: `\\text{BF}(${A.key}) = ${A.balanceFactor}, \\; \\text{BF}(${B.key}) = ${B.balanceFactor} \\implies \\text{AVL Invariant Satisfied.}`,
+    examRule: 'Final Step: Mark new heights and BF values next to each node.',
+    statusBadge: { text: 'RR Balanced', variant: 'success' },
+    rotationMeta: {
+      type: 'RR',
+      pivotKey: A.key,
+      elevatingKey: B.key,
+      direction: 'counter-clockwise',
+      subPhase: 'RECOLORED_BALANCED',
+      stepNumberLabel: `${stepPrefix}.3`,
+      description: `Balanced tree at root ${B.key}`,
+    },
+    treeState: cloneTree(B),
+    activeNodeIds: [B.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(B),
+  });
+
+  return B;
 }
+
+function executeAndRecordLR(
+  A: TreeNode,
+  steps: StepSnapshot[],
+  stepPrefix: string,
+  isDeletion: boolean = false
+): TreeNode {
+  const B = A.left!;
+  const C = B.right!;
+  const alg = isDeletion ? 'AVL Tree Deletion' : 'AVL Tree Insertion';
+
+  // Sub-step 1: Detection
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.1: LR Imbalance Detected at Node ${A.key}`,
+    subtitle: `BF(${A.key}) = +2, BF(${B.key}) = -1 (Left-Right Zigzag Violation)`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Node ${A.key} has Balance Factor +2 (left-heavy), but its left child ${B.key} has BF = -1 (right-heavy). A single rotation cannot balance this zigzag. We must perform a Double Rotation (LR):\nPhase 1: Left Rotate on Child ${B.key}.\nPhase 2: Right Rotate on Parent ${A.key}.`,
+    mathematicalDerivation: `\\text{BF}(${A.key}) = +2, \\; \\text{BF}(${B.key}) = -1 \\implies \\text{RotateLeft}(${B.key}) \\to \\text{RotateRight}(${A.key})`,
+    examRule: 'LR Rule: Rotate child LEFT first to align into LL shape, then rotate parent RIGHT.',
+    statusBadge: { text: 'LR Case: Detected', variant: 'warning' },
+    rotationMeta: {
+      type: 'LR',
+      pivotKey: A.key,
+      elevatingKey: C.key,
+      direction: 'clockwise',
+      subPhase: 'DETECTION',
+      stepNumberLabel: `${stepPrefix}.1`,
+      description: `LR Zigzag at ${A.key} -> ${B.key} -> ${C.key}`,
+    },
+    treeState: cloneTree(A),
+    activeNodeIds: [A.id, B.id, C.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(A),
+  });
+
+  // Sub-step 2: Phase 1 — Left Rotate on Child B (LR $\to$ LL)
+  const T2 = C.left;
+  B.right = T2;
+  C.left = B;
+  updateNodeMetrics(B);
+  updateNodeMetrics(C);
+  A.left = C;
+  updateNodeMetrics(A);
+
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.2: LR Phase 1 — Left Rotate on Child ${B.key}`,
+    subtitle: `Transforms LR Zigzag into Straight LL (Left-Left) Configuration`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Phase 1 of LR: Executed Left Rotation on child ${B.key}.
+- Grandchild ${C.key} elevates to become the new left child of ${A.key}.
+- Node ${B.key} becomes the left child of ${C.key}.
+- Subtree T2 (left of ${C.key}) moves to right of ${B.key}.
+The tree is now in a straight **LL configuration**: ${A.key} $\\to$ ${C.key} $\\to$ ${B.key}.`,
+    mathematicalDerivation: `\\text{RotateLeft}(${B.key}) \\implies \\text{Tree transformed to LL Configuration under } ${A.key}`,
+    examRule: 'Intermediate Checkpoint: Show the intermediate tree in LL form before performing the second rotation.',
+    statusBadge: { text: 'LR Phase 1 (Now LL)', variant: 'warning' },
+    rotationMeta: {
+      type: 'LR',
+      pivotKey: B.key,
+      elevatingKey: C.key,
+      direction: 'counter-clockwise',
+      subPhase: 'SUBTREE_TRANSFER',
+      stepNumberLabel: `${stepPrefix}.2`,
+      description: `Left Rotate on ${B.key} transformed LR zigzag to LL shape`,
+    },
+    treeState: cloneTree(A),
+    activeNodeIds: [A.id, C.id, B.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(A),
+  });
+
+  // Sub-step 3: Phase 2 — Right Rotate on Parent A
+  const T3 = C.right;
+  A.left = T3;
+  C.right = A;
+  updateNodeMetrics(A);
+  updateNodeMetrics(C);
+
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.3: LR Phase 2 — Right Rotate on Parent ${A.key}`,
+    subtitle: `Elevating ${C.key} → Root, Demoting ${A.key} → Right Child of ${C.key}`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Phase 2 of LR: Executed Right Rotation on parent ${A.key}.
+- Node ${C.key} elevates to become the new subtree root.
+- Node ${A.key} becomes the right child of ${C.key}.
+- Subtree T3 (right of ${C.key}) reparents to the left of ${A.key}.`,
+    mathematicalDerivation: `${C.key}.\\text{right} \\leftarrow ${A.key}, \\quad ${A.key}.\\text{left} \\leftarrow T_3`,
+    examRule: 'Double Rotation Invariant: The middle node (C) always emerges as the root of the balanced subtree.',
+    statusBadge: { text: 'LR Phase 2: Executed', variant: 'warning' },
+    rotationMeta: {
+      type: 'LR',
+      pivotKey: A.key,
+      elevatingKey: C.key,
+      direction: 'clockwise',
+      subPhase: 'ROTATION_EXECUTION',
+      stepNumberLabel: `${stepPrefix}.3`,
+      description: `Right Rotate on ${A.key} elevates ${C.key} to root`,
+    },
+    treeState: cloneTree(C),
+    activeNodeIds: [C.id, A.id, B.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(C),
+  });
+
+  // Sub-step 4: LR Balance Restored
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.4: LR Double Rotation Complete & Balanced`,
+    subtitle: `Root: ${C.key} (BF: ${C.balanceFactor}), Left: ${B.key} (BF: ${B.balanceFactor}), Right: ${A.key} (BF: ${A.balanceFactor})`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `LR Double Rotation successfully rebalanced the tree. Heights and balance factors recalculated:\n- h(${B.key}) = ${B.height}, BF(${B.key}) = ${B.balanceFactor}\n- h(${A.key}) = ${A.height}, BF(${A.key}) = ${A.balanceFactor}\n- h(${C.key}) = ${C.height}, BF(${C.key}) = ${C.balanceFactor}`,
+    mathematicalDerivation: `\\text{BF}(${C.key}) = 0, \\; |\\text{BF}(${B.key})| \\le 1, \\; |\\text{BF}(${A.key})| \\le 1 \\implies \\text{Balanced}`,
+    examRule: 'Exam Check: Verify that all three nodes satisfy |BF| ≤ 1.',
+    statusBadge: { text: 'LR Balanced', variant: 'success' },
+    rotationMeta: {
+      type: 'LR',
+      pivotKey: A.key,
+      elevatingKey: C.key,
+      direction: 'clockwise',
+      subPhase: 'RECOLORED_BALANCED',
+      stepNumberLabel: `${stepPrefix}.4`,
+      description: `Balanced tree at root ${C.key}`,
+    },
+    treeState: cloneTree(C),
+    activeNodeIds: [C.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(C),
+  });
+
+  return C;
+}
+
+function executeAndRecordRL(
+  A: TreeNode,
+  steps: StepSnapshot[],
+  stepPrefix: string,
+  isDeletion: boolean = false
+): TreeNode {
+  const B = A.right!;
+  const C = B.left!;
+  const alg = isDeletion ? 'AVL Tree Deletion' : 'AVL Tree Insertion';
+
+  // Sub-step 1: Detection
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.1: RL Imbalance Detected at Node ${A.key}`,
+    subtitle: `BF(${A.key}) = -2, BF(${B.key}) = +1 (Right-Left Zigzag Violation)`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Node ${A.key} has Balance Factor -2 (right-heavy), but its right child ${B.key} has BF = +1 (left-heavy). Perform Double Rotation (RL):\nPhase 1: Right Rotate on Child ${B.key}.\nPhase 2: Left Rotate on Parent ${A.key}.`,
+    mathematicalDerivation: `\\text{BF}(${A.key}) = -2, \\; \\text{BF}(${B.key}) = +1 \\implies \\text{RotateRight}(${B.key}) \\to \\text{RotateLeft}(${A.key})`,
+    examRule: 'RL Rule: Rotate child RIGHT first to align into RR shape, then rotate parent LEFT.',
+    statusBadge: { text: 'RL Case: Detected', variant: 'warning' },
+    rotationMeta: {
+      type: 'RL',
+      pivotKey: A.key,
+      elevatingKey: C.key,
+      direction: 'counter-clockwise',
+      subPhase: 'DETECTION',
+      stepNumberLabel: `${stepPrefix}.1`,
+      description: `RL Zigzag at ${A.key} -> ${B.key} -> ${C.key}`,
+    },
+    treeState: cloneTree(A),
+    activeNodeIds: [A.id, B.id, C.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(A),
+  });
+
+  // Sub-step 2: Phase 1 — Right Rotate on Child B (RL $\to$ RR)
+  const T2 = C.right;
+  B.left = T2;
+  C.right = B;
+  updateNodeMetrics(B);
+  updateNodeMetrics(C);
+  A.right = C;
+  updateNodeMetrics(A);
+
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.2: RL Phase 1 — Right Rotate on Child ${B.key}`,
+    subtitle: `Transforms RL Zigzag into Straight RR (Right-Right) Configuration`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Phase 1 of RL: Executed Right Rotation on child ${B.key}.
+- Grandchild ${C.key} elevates to become the new right child of ${A.key}.
+- Node ${B.key} becomes the right child of ${C.key}.
+- Subtree T2 (right of ${C.key}) moves to left of ${B.key}.
+The tree is now in a straight **RR configuration**: ${A.key} $\\to$ ${C.key} $\\to$ ${B.key}.`,
+    mathematicalDerivation: `\\text{RotateRight}(${B.key}) \\implies \\text{Tree transformed to RR Configuration under } ${A.key}`,
+    examRule: 'Intermediate Checkpoint: Show the intermediate tree in RR form before performing the second rotation.',
+    statusBadge: { text: 'RL Phase 1 (Now RR)', variant: 'warning' },
+    rotationMeta: {
+      type: 'RL',
+      pivotKey: B.key,
+      elevatingKey: C.key,
+      direction: 'clockwise',
+      subPhase: 'SUBTREE_TRANSFER',
+      stepNumberLabel: `${stepPrefix}.2`,
+      description: `Right Rotate on ${B.key} transformed RL zigzag to RR shape`,
+    },
+    treeState: cloneTree(A),
+    activeNodeIds: [A.id, C.id, B.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(A),
+  });
+
+  // Sub-step 3: Phase 2 — Left Rotate on Parent A
+  const T3 = C.left;
+  A.right = T3;
+  C.left = A;
+  updateNodeMetrics(A);
+  updateNodeMetrics(C);
+
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.3: RL Phase 2 — Left Rotate on Parent ${A.key}`,
+    subtitle: `Elevating ${C.key} → Root, Demoting ${A.key} → Left Child of ${C.key}`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `Phase 2 of RL: Executed Left Rotation on parent ${A.key}.
+- Node ${C.key} elevates to become the new subtree root.
+- Node ${A.key} becomes the left child of ${C.key}.
+- Subtree T3 (left of ${C.key}) reparents to the right of ${A.key}.`,
+    mathematicalDerivation: `${C.key}.\\text{left} \\leftarrow ${A.key}, \\quad ${A.key}.\\text{right} \\leftarrow T_3`,
+    examRule: 'Double Rotation Invariant: The middle node (C) always emerges as the root of the balanced subtree.',
+    statusBadge: { text: 'RL Phase 2: Executed', variant: 'warning' },
+    rotationMeta: {
+      type: 'RL',
+      pivotKey: A.key,
+      elevatingKey: C.key,
+      direction: 'counter-clockwise',
+      subPhase: 'ROTATION_EXECUTION',
+      stepNumberLabel: `${stepPrefix}.3`,
+      description: `Left Rotate on ${A.key} elevates ${C.key} to root`,
+    },
+    treeState: cloneTree(C),
+    activeNodeIds: [C.id, A.id, B.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(C),
+  });
+
+  // Sub-step 4: RL Balance Restored
+  steps.push({
+    stepIndex: steps.length,
+    totalSteps: 0,
+    title: `${stepPrefix}.4: RL Double Rotation Complete & Balanced`,
+    subtitle: `Root: ${C.key} (BF: ${C.balanceFactor}), Left: ${A.key} (BF: ${A.balanceFactor}), Right: ${B.key} (BF: ${B.balanceFactor})`,
+    category: 'TREE',
+    algorithmName: alg,
+    facultyExplanation: `RL Double Rotation successfully rebalanced the tree. Heights and balance factors recalculated:\n- h(${A.key}) = ${A.height}, BF(${A.key}) = ${A.balanceFactor}\n- h(${B.key}) = ${B.height}, BF(${B.key}) = ${B.balanceFactor}\n- h(${C.key}) = ${C.height}, BF(${C.key}) = ${C.balanceFactor}`,
+    mathematicalDerivation: `\\text{BF}(${C.key}) = 0, \\; |\\text{BF}(${A.key})| \\le 1, \\; |\\text{BF}(${B.key})| \\le 1 \\implies \\text{Balanced}`,
+    examRule: 'Exam Check: Verify that all three nodes satisfy |BF| ≤ 1.',
+    statusBadge: { text: 'RL Balanced', variant: 'success' },
+    rotationMeta: {
+      type: 'RL',
+      pivotKey: A.key,
+      elevatingKey: C.key,
+      direction: 'counter-clockwise',
+      subPhase: 'RECOLORED_BALANCED',
+      stepNumberLabel: `${stepPrefix}.4`,
+      description: `Balanced tree at root ${C.key}`,
+    },
+    treeState: cloneTree(C),
+    activeNodeIds: [C.id],
+    traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
+    traceTableRows: collectTableRows(C),
+  });
+
+  return C;
+}
+
+// --------------------------------------------------------------------------
+// AVL Insertion
+// --------------------------------------------------------------------------
 
 export function generateAVLInsertionSteps(keys: number[]): StepSnapshot[] {
   const steps: StepSnapshot[] = [];
@@ -121,7 +594,7 @@ export function generateAVLInsertionSteps(keys: number[]): StepSnapshot[] {
     steps.push({
       stepIndex: steps.length,
       totalSteps: 0,
-      title: `Step ${i + 1}.1: BST Insertion of Key ${key}`,
+      title: `Step ${i + 1}: BST Insertion of Key ${key}`,
       subtitle: `Inserting ${key} following standard binary search tree ordering`,
       category: 'TREE',
       algorithmName: 'AVL Tree Insertion',
@@ -136,7 +609,7 @@ export function generateAVLInsertionSteps(keys: number[]): StepSnapshot[] {
     });
 
     // Perform recursive insert with snapshot generation
-    root = insertAndRecord(root, key, steps);
+    root = insertAndRecord(root, key, steps, `Step ${i + 1}`);
   }
 
   // Final summary snapshot
@@ -156,7 +629,6 @@ export function generateAVLInsertionSteps(keys: number[]): StepSnapshot[] {
     traceTableRows: collectTableRows(root),
   });
 
-  // Assign total steps
   steps.forEach((s) => (s.totalSteps = steps.length));
   return steps;
 }
@@ -164,7 +636,8 @@ export function generateAVLInsertionSteps(keys: number[]): StepSnapshot[] {
 function insertAndRecord(
   node: TreeNode | null | undefined,
   key: number,
-  steps: StepSnapshot[]
+  steps: StepSnapshot[],
+  stepPrefix: string
 ): TreeNode {
   if (!node) {
     const newNode = createNode(key);
@@ -175,120 +648,50 @@ function insertAndRecord(
   }
 
   if (key < node.key) {
-    node.left = insertAndRecord(node.left, key, steps);
+    node.left = insertAndRecord(node.left, key, steps, stepPrefix);
   } else if (key > node.key) {
-    node.right = insertAndRecord(node.right, key, steps);
+    node.right = insertAndRecord(node.right, key, steps, stepPrefix);
   } else {
     // Duplicate keys ignored
     return node;
   }
 
   updateNodeMetrics(node);
-
   const bf = node.balanceFactor;
 
   // Case 1: Left-Left (LL)
   if (bf > 1 && node.left && key < node.left.key) {
-    steps.push({
-      stepIndex: steps.length,
-      totalSteps: 0,
-      title: `LL Violation at Node ${node.key}`,
-      subtitle: `BF(${node.key}) = +2, BF(${node.left.key}) = +1`,
-      category: 'TREE',
-      algorithmName: 'AVL Tree Insertion',
-      facultyExplanation: `Node ${node.key} has Balance Factor +2 (left-heavy), and newly inserted key ${key} is in the Left Subtree of left child ${node.left.key}. This is a Left-Left (LL) Case. Perform a Single Right Rotation on Node ${node.key}.`,
-      mathematicalDerivation: `BF(${node.key}) = h_L - h_R = ${getHeight(node.left)} - ${getHeight(node.right)} = +2 \\implies \\text{Right Rotation on } ${node.key}`,
-      examRule: 'LL Case Resolution: Right Rotation on node with BF = +2. Left child becomes new subtree root.',
-      statusBadge: { text: 'LL Case (Right Rotate)', variant: 'danger' },
-      treeState: cloneTree(node),
-      activeNodeIds: [node.id, node.left.id],
-      traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
-      traceTableRows: collectTableRows(node),
-    });
-
-    const rotated = rotateRight(node);
-    return rotated;
+    return executeAndRecordLL(node, steps, stepPrefix, false);
   }
 
   // Case 2: Right-Right (RR)
   if (bf < -1 && node.right && key > node.right.key) {
-    steps.push({
-      stepIndex: steps.length,
-      totalSteps: 0,
-      title: `RR Violation at Node ${node.key}`,
-      subtitle: `BF(${node.key}) = -2, BF(${node.right.key}) = -1`,
-      category: 'TREE',
-      algorithmName: 'AVL Tree Insertion',
-      facultyExplanation: `Node ${node.key} has Balance Factor -2 (right-heavy), and key ${key} was added to the Right Subtree of right child ${node.right.key}. This is a Right-Right (RR) Case. Perform a Single Left Rotation on Node ${node.key}.`,
-      mathematicalDerivation: `BF(${node.key}) = h_L - h_R = ${getHeight(node.left)} - ${getHeight(node.right)} = -2 \\implies \\text{Left Rotation on } ${node.key}`,
-      examRule: 'RR Case Resolution: Left Rotation on node with BF = -2. Right child becomes new subtree root.',
-      statusBadge: { text: 'RR Case (Left Rotate)', variant: 'danger' },
-      treeState: cloneTree(node),
-      activeNodeIds: [node.id, node.right.id],
-      traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
-      traceTableRows: collectTableRows(node),
-    });
-
-    const rotated = rotateLeft(node);
-    return rotated;
+    return executeAndRecordRR(node, steps, stepPrefix, false);
   }
 
   // Case 3: Left-Right (LR)
   if (bf > 1 && node.left && key > node.left.key) {
-    steps.push({
-      stepIndex: steps.length,
-      totalSteps: 0,
-      title: `LR Violation at Node ${node.key}`,
-      subtitle: `BF(${node.key}) = +2, BF(${node.left.key}) = -1`,
-      category: 'TREE',
-      algorithmName: 'AVL Tree Insertion',
-      facultyExplanation: `Node ${node.key} has Balance Factor +2 (left-heavy), but key ${key} is in the Right Subtree of left child ${node.left.key} (LR Case). Perform a Double Rotation: (1) Left Rotation on Left Child ${node.left.key}, then (2) Right Rotation on Node ${node.key}.`,
-      mathematicalDerivation: `BF(${node.key}) = +2, \\; BF(${node.left.key}) = -1 \\implies \\text{RotateLeft}(${node.left.key}) \\to \\text{RotateRight}(${node.key})`,
-      examRule: 'LR Case Resolution: Double rotation (Left on child, Right on parent).',
-      statusBadge: { text: 'LR Case (Left-Right Double Rotate)', variant: 'warning' },
-      treeState: cloneTree(node),
-      activeNodeIds: [node.id, node.left.id],
-      traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
-      traceTableRows: collectTableRows(node),
-    });
-
-    node.left = rotateLeft(node.left);
-    return rotateRight(node);
+    return executeAndRecordLR(node, steps, stepPrefix, false);
   }
 
   // Case 4: Right-Left (RL)
   if (bf < -1 && node.right && key < node.right.key) {
-    steps.push({
-      stepIndex: steps.length,
-      totalSteps: 0,
-      title: `RL Violation at Node ${node.key}`,
-      subtitle: `BF(${node.key}) = -2, BF(${node.right.key}) = +1`,
-      category: 'TREE',
-      algorithmName: 'AVL Tree Insertion',
-      facultyExplanation: `Node ${node.key} has Balance Factor -2 (right-heavy), but key ${key} is in the Left Subtree of right child ${node.right.key} (RL Case). Perform a Double Rotation: (1) Right Rotation on Right Child ${node.right.key}, then (2) Left Rotation on Node ${node.key}.`,
-      mathematicalDerivation: `BF(${node.key}) = -2, \\; BF(${node.right.key}) = +1 \\implies \\text{RotateRight}(${node.right.key}) \\to \\text{RotateLeft}(${node.key})`,
-      examRule: 'RL Case Resolution: Double rotation (Right on child, Left on parent).',
-      statusBadge: { text: 'RL Case (Right-Left Double Rotate)', variant: 'warning' },
-      treeState: cloneTree(node),
-      activeNodeIds: [node.id, node.right.id],
-      traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
-      traceTableRows: collectTableRows(node),
-    });
-
-    node.right = rotateRight(node.right);
-    return rotateLeft(node);
+    return executeAndRecordRL(node, steps, stepPrefix, false);
   }
 
   return node;
 }
 
+// --------------------------------------------------------------------------
+// AVL Deletion
+// --------------------------------------------------------------------------
+
 export function generateAVLDeletionSteps(initialKeys: number[], deleteKeys: number[]): StepSnapshot[] {
-  // Build initial tree
   let root: TreeNode | null = null;
   nextNodeId = 1;
   const dummySteps: StepSnapshot[] = [];
   for (const k of initialKeys) {
-    root = insertAndRecord(root, k, dummySteps);
+    root = insertAndRecord(root, k, dummySteps, 'Init');
   }
 
   const steps: StepSnapshot[] = [];
@@ -327,7 +730,7 @@ export function generateAVLDeletionSteps(initialKeys: number[], deleteKeys: numb
       traceTableRows: collectTableRows(root),
     });
 
-    root = deleteAndRecord(root, keyToDelete, steps);
+    root = deleteAndRecord(root, keyToDelete, steps, `Step ${i + 1}`);
   }
 
   steps.push({
@@ -361,27 +764,26 @@ function getMinValueNode(node: TreeNode): TreeNode {
 function deleteAndRecord(
   node: TreeNode | null | undefined,
   key: number,
-  steps: StepSnapshot[]
+  steps: StepSnapshot[],
+  stepPrefix: string
 ): TreeNode | null {
   if (!node) return null;
 
   if (key < node.key) {
-    node.left = deleteAndRecord(node.left, key, steps);
+    node.left = deleteAndRecord(node.left, key, steps, stepPrefix);
   } else if (key > node.key) {
-    node.right = deleteAndRecord(node.right, key, steps);
+    node.right = deleteAndRecord(node.right, key, steps, stepPrefix);
   } else {
     // Found node to delete
     if (!node.left || !node.right) {
       const temp = node.left ? node.left : node.right;
       if (!temp) {
-        // No child (Leaf)
         node = null;
       } else {
-        // One child
         node = temp;
       }
     } else {
-      // Two children: Get in-order successor (smallest in right subtree)
+      // Two children: In-order successor
       const temp = getMinValueNode(node.right);
       const oldKey = node.key;
       node.key = temp.key;
@@ -389,20 +791,20 @@ function deleteAndRecord(
       steps.push({
         stepIndex: steps.length,
         totalSteps: 0,
-        title: `Node ${oldKey} Has Two Children: Replace with Successor ${temp.key}`,
+        title: `${stepPrefix}: Node ${oldKey} Has Two Children → Replace with In-order Successor ${temp.key}`,
         subtitle: `In-order successor ${temp.key} copied to node position`,
         category: 'TREE',
         algorithmName: 'AVL Tree Deletion',
         facultyExplanation: `Node ${oldKey} has two children. Find its in-order successor (minimum value in right subtree = ${temp.key}). Copy ${temp.key} into node ${oldKey}'s position, and recursively delete key ${temp.key} from the right subtree.`,
         mathematicalDerivation: `\\text{Successor}(${oldKey}) = ${temp.key}. \\quad \\text{Copy } ${temp.key} \\to \\text{Node}, \\text{ then delete duplicate in right subtree.}`,
         examRule: 'Rule: When deleting a 2-child node, always substitute the In-Order Successor (or Predecessor) and delete that leaf.',
-        statusBadge: { text: 'In-order Successor Substituted', variant: 'warning' },
+        statusBadge: { text: 'Successor Substituted', variant: 'warning' },
         treeState: cloneTree(node),
         traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
         traceTableRows: collectTableRows(node),
       });
 
-      node.right = deleteAndRecord(node.right, temp.key, steps);
+      node.right = deleteAndRecord(node.right, temp.key, steps, stepPrefix);
     }
   }
 
@@ -415,84 +817,18 @@ function deleteAndRecord(
   if (bf > 1 && node.left) {
     const leftBf = node.left.balanceFactor;
     if (leftBf >= 0) {
-      // LL Case
-      steps.push({
-        stepIndex: steps.length,
-        totalSteps: 0,
-        title: `Rebalance After Deletion: LL Case at Node ${node.key}`,
-        subtitle: `BF(${node.key}) = +2, BF(${node.left.key}) = ${leftBf >= 0 ? '+' : ''}${leftBf}`,
-        category: 'TREE',
-        algorithmName: 'AVL Tree Deletion',
-        facultyExplanation: `Deletion in right subtree caused Node ${node.key} to become left-heavy with BF = +2. Since Left Child ${node.left.key} has BF ≥ 0, perform a Single Right Rotation on Node ${node.key}.`,
-        mathematicalDerivation: `BF(${node.key}) = +2, BF(${node.left.key}) \\ge 0 \\implies \\text{Right Rotation on } ${node.key}`,
-        examRule: 'LL Deletion Rebalance: Single Right Rotation restores balance.',
-        statusBadge: { text: 'LL Deletion Rebalance', variant: 'danger' },
-        treeState: cloneTree(node),
-        traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
-        traceTableRows: collectTableRows(node),
-      });
-      return rotateRight(node);
+      return executeAndRecordLL(node, steps, `${stepPrefix}-Rebalance`, true);
     } else {
-      // LR Case
-      steps.push({
-        stepIndex: steps.length,
-        totalSteps: 0,
-        title: `Rebalance After Deletion: LR Case at Node ${node.key}`,
-        subtitle: `BF(${node.key}) = +2, BF(${node.left.key}) = -1`,
-        category: 'TREE',
-        algorithmName: 'AVL Tree Deletion',
-        facultyExplanation: `Node ${node.key} has BF = +2 and Left Child ${node.left.key} has BF = -1. Perform Double Rotation: Left on Child ${node.left.key}, then Right on Node ${node.key}.`,
-        mathematicalDerivation: `BF(${node.key}) = +2, BF(${node.left.key}) = -1 \\implies \\text{RotateLeft}(${node.left.key}) \\to \\text{RotateRight}(${node.key})`,
-        examRule: 'LR Deletion Rebalance: Double Rotation (Left-Right).',
-        statusBadge: { text: 'LR Deletion Rebalance', variant: 'warning' },
-        treeState: cloneTree(node),
-        traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
-        traceTableRows: collectTableRows(node),
-      });
-      node.left = rotateLeft(node.left);
-      return rotateRight(node);
+      return executeAndRecordLR(node, steps, `${stepPrefix}-Rebalance`, true);
     }
   }
 
   if (bf < -1 && node.right) {
     const rightBf = node.right.balanceFactor;
     if (rightBf <= 0) {
-      // RR Case
-      steps.push({
-        stepIndex: steps.length,
-        totalSteps: 0,
-        title: `Rebalance After Deletion: RR Case at Node ${node.key}`,
-        subtitle: `BF(${node.key}) = -2, BF(${node.right.key}) = ${rightBf >= 0 ? '+' : ''}${rightBf}`,
-        category: 'TREE',
-        algorithmName: 'AVL Tree Deletion',
-        facultyExplanation: `Deletion in left subtree caused Node ${node.key} to become right-heavy with BF = -2. Since Right Child ${node.right.key} has BF ≤ 0, perform a Single Left Rotation on Node ${node.key}.`,
-        mathematicalDerivation: `BF(${node.key}) = -2, BF(${node.right.key}) \\le 0 \\implies \\text{Left Rotation on } ${node.key}`,
-        examRule: 'RR Deletion Rebalance: Single Left Rotation restores balance.',
-        statusBadge: { text: 'RR Deletion Rebalance', variant: 'danger' },
-        treeState: cloneTree(node),
-        traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
-        traceTableRows: collectTableRows(node),
-      });
-      return rotateLeft(node);
+      return executeAndRecordRR(node, steps, `${stepPrefix}-Rebalance`, true);
     } else {
-      // RL Case
-      steps.push({
-        stepIndex: steps.length,
-        totalSteps: 0,
-        title: `Rebalance After Deletion: RL Case at Node ${node.key}`,
-        subtitle: `BF(${node.key}) = -2, BF(${node.right.key}) = +1`,
-        category: 'TREE',
-        algorithmName: 'AVL Tree Deletion',
-        facultyExplanation: `Node ${node.key} has BF = -2 and Right Child ${node.right.key} has BF = +1. Perform Double Rotation: Right on Child ${node.right.key}, then Left on Node ${node.key}.`,
-        mathematicalDerivation: `BF(${node.key}) = -2, BF(${node.right.key}) = +1 \\implies \\text{RotateRight}(${node.right.key}) \\to \\text{RotateLeft}(${node.key})`,
-        examRule: 'RL Deletion Rebalance: Double Rotation (Right-Left).',
-        statusBadge: { text: 'RL Deletion Rebalance', variant: 'warning' },
-        treeState: cloneTree(node),
-        traceTableHeaders: ['Node Key', 'Left Height (hL)', 'Right Height (hR)', 'Height (h)', 'Balance Factor (BF)', 'Status'],
-        traceTableRows: collectTableRows(node),
-      });
-      node.right = rotateRight(node.right);
-      return rotateLeft(node);
+      return executeAndRecordRL(node, steps, `${stepPrefix}-Rebalance`, true);
     }
   }
 

@@ -40,6 +40,20 @@ export interface StepSnapshot {
   traceTableRows: TraceTableRow[];
   activeTableRowIndex?: number;
 
+  // Rotation Metadata for intermediate rotation breakdowns
+  rotationMeta?: {
+    type: 'LL' | 'RR' | 'LR' | 'RL' | 'ZIG' | 'ZIG_ZIG' | 'ZIG_ZAG' | 'SPLIT_PROMOTE' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'RECOLOR';
+    pivotKey: number;
+    elevatingKey?: number;
+    direction?: 'clockwise' | 'counter-clockwise';
+    subPhase?: string;
+    stepNumberLabel?: string;
+    transferredSubtree?: string;
+    description: string;
+  };
+  
+  stepNumberLabel?: string;
+
   // Auxiliary Structures (Queue, Stack, MST set, Topological List, DSU)
   auxiliaryState?: {
     type: 'queue' | 'stack' | 'mst' | 'topo_list' | 'dsu' | 'priority_queue' | 'rebalance';

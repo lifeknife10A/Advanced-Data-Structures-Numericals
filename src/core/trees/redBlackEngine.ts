@@ -132,7 +132,7 @@ export function generateRedBlackInsertionSteps(keys: number[]): StepSnapshot[] {
       parent = curr;
       if (key < curr.key) curr = curr.left;
       else if (key > curr.key) curr = curr.right;
-      else break; // duplicate
+      else break;
     }
 
     newNode.parent = parent;
@@ -152,8 +152,8 @@ export function generateRedBlackInsertionSteps(keys: number[]): StepSnapshot[] {
       subtitle: `Attached as RED child of ${parent ? parent.key : 'Root'}`,
       category: 'TREE',
       algorithmName: 'Red-Black Tree Insertion',
-      facultyExplanation: `Inserted key ${key} as a RED node following standard BST ordering. Now verifying if parent is RED (which triggers a Red-Red conflict).`,
-      mathematicalDerivation: `\\text{Insert } ${key} \\text{ (RED)} \\implies \\text{Check } P(${key}) = ${parent ? parent.key : '\\emptyset'}`,
+      facultyExplanation: `Inserted key ${key} as a RED node following standard BST ordering. Now verifying if parent is RED (which triggers a Double-Red conflict).`,
+      mathematicalDerivation: `\\text{Insert } ${key} \\text{ (RED)} \\implies \\text{Check Parent } P(${key}) = ${parent ? parent.key : '\\emptyset'}`,
       examRule: 'Insertion Step: Insert as RED node to preserve black-height on all existing paths.',
       statusBadge: { text: `Inserted ${key} (RED)`, variant: 'accent' },
       treeState: convertRBToTreeNode(root),
@@ -163,7 +163,7 @@ export function generateRedBlackInsertionSteps(keys: number[]): StepSnapshot[] {
 
     // Fix Red-Black Violations
     if (root) {
-      root = fixRedBlackInsert(root, newNode, steps);
+      root = fixRedBlackInsert(root, newNode, steps, `Step ${i + 1}`);
     }
   }
 
@@ -188,7 +188,7 @@ export function generateRedBlackInsertionSteps(keys: number[]): StepSnapshot[] {
   return steps;
 }
 
-function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNode {
+function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[], stepPrefix: string): RBNode {
   let curr: RBNode = z;
 
   while (curr.parent && curr.parent.color === 'RED') {
@@ -209,14 +209,26 @@ function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNo
         steps.push({
           stepIndex: steps.length,
           totalSteps: 0,
-          title: `Case 1: Uncle ${uncle.key} is RED $\\implies$ Recolor`,
-          subtitle: `Parent ${parent.key} & Uncle ${uncle.key} $\\to$ BLACK, Grandparent ${grandparent.key} $\\to$ RED`,
+          title: `${stepPrefix}.2: Case 1 — Uncle ${uncle.key} is RED ⟹ Recolor`,
+          subtitle: `Parent ${parent.key} & Uncle ${uncle.key} → BLACK, Grandparent ${grandparent.key} → RED`,
           category: 'TREE',
           algorithmName: 'Red-Black Tree Insertion',
-          facultyExplanation: `Conflict at node ${curr.key}: Parent ${parent.key} is RED and Uncle ${uncle.key} is RED (Case 1).\nAction: Recolor Parent and Uncle to BLACK, and Grandparent ${grandparent.key} to RED. Move check up to Grandparent.`,
+          facultyExplanation: `Double-Red conflict at node ${curr.key}: Both ${curr.key} and Parent ${parent.key} are RED, and Uncle ${uncle.key} is RED (Case 1).\n\nAction:
+1. Recolor Parent ${parent.key} to BLACK.
+2. Recolor Uncle ${uncle.key} to BLACK.
+3. Recolor Grandparent ${grandparent.key} to RED.
+4. Move violation pointer to Grandparent ${grandparent.key} and continue checking up.`,
           mathematicalDerivation: `\\text{Case 1: } P(${parent.key}) \\to \\text{BLACK}, \\; U(${uncle.key}) \\to \\text{BLACK}, \\; G(${grandparent.key}) \\to \\text{RED}`,
           examRule: 'Case 1 Rule: When uncle is RED, only recoloring is needed (no rotations).',
           statusBadge: { text: 'Case 1: Recolor', variant: 'warning' },
+          rotationMeta: {
+            type: 'CASE_1',
+            pivotKey: grandparent.key,
+            elevatingKey: parent.key,
+            subPhase: 'RECOLORED_BALANCED',
+            stepNumberLabel: `${stepPrefix}.2`,
+            description: `Recolored Parent ${parent.key} and Uncle ${uncle.key} to BLACK, Grandparent ${grandparent.key} to RED`,
+          },
           treeState: convertRBToTreeNode(root),
           traceTableHeaders: ['Key', 'Color', 'Parent', 'Left Child', 'Right Child', 'Black-Height'],
           traceTableRows: collectRBRows(root),
@@ -232,14 +244,23 @@ function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNo
           steps.push({
             stepIndex: steps.length,
             totalSteps: 0,
-            title: `Case 2: Uncle is BLACK (Triangle) $\\implies$ Left Rotate on ${curr.key}`,
+            title: `${stepPrefix}.2: Case 2 — Uncle is BLACK (Triangle) ⟹ Left Rotate on ${curr.key}`,
             subtitle: `Transforming triangle configuration into a line (Case 3)`,
             category: 'TREE',
             algorithmName: 'Red-Black Tree Insertion',
-            facultyExplanation: `Node ${curr.key} is right child of left child ${parent.key} (Triangle shape). Left rotate on Parent ${parent.key} to align into a straight line.`,
-            mathematicalDerivation: `\\text{Case 2: } \\text{RotateLeft}(P = ${parent.key}) \\implies \\text{Transforms into Case 3}`,
-            examRule: 'Case 2 Rule: Rotate child around parent to form a straight line.',
+            facultyExplanation: `Node ${curr.key} is right child of left child ${parent.key} (Triangle configuration). Left rotate on Parent ${parent.key} to align into a straight line.`,
+            mathematicalDerivation: `\\text{Case 2: } \\text{RotateLeft}(P = ${parent.key}) \\implies \\text{Transforms into Case 3 (Straight Line)}`,
+            examRule: 'Case 2 Rule: Rotate child around parent to convert triangle into a straight line.',
             statusBadge: { text: 'Case 2: Rotate Left', variant: 'warning' },
+            rotationMeta: {
+              type: 'CASE_2',
+              pivotKey: parent.key,
+              elevatingKey: curr.key,
+              direction: 'counter-clockwise',
+              subPhase: 'SUBTREE_TRANSFER',
+              stepNumberLabel: `${stepPrefix}.2`,
+              description: `Left Rotate on ${parent.key} transforms triangle into straight line`,
+            },
             treeState: convertRBToTreeNode(root),
             traceTableHeaders: ['Key', 'Color', 'Parent', 'Left Child', 'Right Child', 'Black-Height'],
             traceTableRows: collectRBRows(root),
@@ -251,19 +272,34 @@ function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNo
           curr.parent.color = 'BLACK';
           if (curr.parent.parent) {
             curr.parent.parent.color = 'RED';
+            const gKey = curr.parent.parent.key;
+            const pKey = curr.parent.key;
             root = rotateRightRB(root, curr.parent.parent);
 
             steps.push({
               stepIndex: steps.length,
               totalSteps: 0,
-              title: `Case 3: Uncle is BLACK (Line) $\\implies$ Right Rotate on Grandparent`,
-              subtitle: `Parent $\\to$ BLACK, Grandparent $\\to$ RED, Right Rotate`,
+              title: `${stepPrefix}.3: Case 3 — Uncle is BLACK (Line) ⟹ Right Rotate on Grandparent`,
+              subtitle: `Parent ${pKey} → BLACK, Grandparent ${gKey} → RED, Right Rotate on ${gKey}`,
               category: 'TREE',
               algorithmName: 'Red-Black Tree Insertion',
-              facultyExplanation: `Node ${curr.key} is in a straight line with Parent and Grandparent (Case 3).\nAction: Recolor Parent to BLACK, Grandparent to RED, and perform a Right Rotation on Grandparent.`,
-              mathematicalDerivation: `\\text{Case 3: } P \\to \\text{BLACK}, \\; G \\to \\text{RED}, \\; \\text{RotateRight}(G)`,
+              facultyExplanation: `Node ${curr.key} is in a straight line with Parent and Grandparent (Case 3).\n\nAction:
+1. Recolor Parent ${pKey} to BLACK.
+2. Recolor Grandparent ${gKey} to RED.
+3. Perform a Right Rotation on Grandparent ${gKey}.
+Double-Red violation is completely eliminated!`,
+              mathematicalDerivation: `\\text{Case 3: } P(${pKey}) \\to \\text{BLACK}, \\; G(${gKey}) \\to \\text{RED}, \\; \\text{RotateRight}(G = ${gKey})`,
               examRule: 'Case 3 Rule: Swap colors of Parent and Grandparent, then rotate parent around grandparent.',
               statusBadge: { text: 'Case 3: Rotate & Recolor', variant: 'danger' },
+              rotationMeta: {
+                type: 'CASE_3',
+                pivotKey: gKey,
+                elevatingKey: pKey,
+                direction: 'clockwise',
+                subPhase: 'ROTATION_EXECUTION',
+                stepNumberLabel: `${stepPrefix}.3`,
+                description: `Right Rotate on Grandparent ${gKey} with Parent ${pKey} recolored BLACK`,
+              },
               treeState: convertRBToTreeNode(root),
               traceTableHeaders: ['Key', 'Color', 'Parent', 'Left Child', 'Right Child', 'Black-Height'],
               traceTableRows: collectRBRows(root),
@@ -285,14 +321,22 @@ function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNo
         steps.push({
           stepIndex: steps.length,
           totalSteps: 0,
-          title: `Case 1: Uncle ${uncle.key} is RED $\\implies$ Recolor`,
-          subtitle: `Parent ${parent.key} & Uncle ${uncle.key} $\\to$ BLACK, Grandparent ${grandparent.key} $\\to$ RED`,
+          title: `${stepPrefix}.2: Case 1 — Uncle ${uncle.key} is RED ⟹ Recolor`,
+          subtitle: `Parent ${parent.key} & Uncle ${uncle.key} → BLACK, Grandparent ${grandparent.key} → RED`,
           category: 'TREE',
           algorithmName: 'Red-Black Tree Insertion',
-          facultyExplanation: `Conflict at node ${curr.key}: Parent ${parent.key} is RED and Uncle ${uncle.key} is RED (Case 1).\nAction: Recolor Parent and Uncle to BLACK, and Grandparent ${grandparent.key} to RED.`,
+          facultyExplanation: `Double-Red conflict at node ${curr.key}: Both ${curr.key} and Parent ${parent.key} are RED, and Uncle ${uncle.key} is RED (Case 1).\n\nAction: Recolor Parent and Uncle to BLACK, and Grandparent ${grandparent.key} to RED.`,
           mathematicalDerivation: `\\text{Case 1: } P(${parent.key}) \\to \\text{BLACK}, \\; U(${uncle.key}) \\to \\text{BLACK}, \\; G(${grandparent.key}) \\to \\text{RED}`,
           examRule: 'Case 1 Rule: When uncle is RED, only recoloring is needed (no rotations).',
           statusBadge: { text: 'Case 1: Recolor', variant: 'warning' },
+          rotationMeta: {
+            type: 'CASE_1',
+            pivotKey: grandparent.key,
+            elevatingKey: parent.key,
+            subPhase: 'RECOLORED_BALANCED',
+            stepNumberLabel: `${stepPrefix}.2`,
+            description: `Recolored Parent ${parent.key} and Uncle ${uncle.key} to BLACK, Grandparent ${grandparent.key} to RED`,
+          },
           treeState: convertRBToTreeNode(root),
           traceTableHeaders: ['Key', 'Color', 'Parent', 'Left Child', 'Right Child', 'Black-Height'],
           traceTableRows: collectRBRows(root),
@@ -308,7 +352,7 @@ function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNo
           steps.push({
             stepIndex: steps.length,
             totalSteps: 0,
-            title: `Case 2: Uncle is BLACK (Triangle) $\\implies$ Right Rotate on ${curr.key}`,
+            title: `${stepPrefix}.2: Case 2 — Uncle is BLACK (Triangle) ⟹ Right Rotate on ${curr.key}`,
             subtitle: `Transforming triangle configuration into a line (Case 3)`,
             category: 'TREE',
             algorithmName: 'Red-Black Tree Insertion',
@@ -316,6 +360,15 @@ function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNo
             mathematicalDerivation: `\\text{Case 2: } \\text{RotateRight}(P = ${parent.key}) \\implies \\text{Transforms into Case 3}`,
             examRule: 'Case 2 Rule: Rotate child around parent to form a straight line.',
             statusBadge: { text: 'Case 2: Rotate Right', variant: 'warning' },
+            rotationMeta: {
+              type: 'CASE_2',
+              pivotKey: parent.key,
+              elevatingKey: curr.key,
+              direction: 'clockwise',
+              subPhase: 'SUBTREE_TRANSFER',
+              stepNumberLabel: `${stepPrefix}.2`,
+              description: `Right Rotate on ${parent.key} transforms triangle into line`,
+            },
             treeState: convertRBToTreeNode(root),
             traceTableHeaders: ['Key', 'Color', 'Parent', 'Left Child', 'Right Child', 'Black-Height'],
             traceTableRows: collectRBRows(root),
@@ -327,19 +380,30 @@ function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNo
           curr.parent.color = 'BLACK';
           if (curr.parent.parent) {
             curr.parent.parent.color = 'RED';
+            const gKey = curr.parent.parent.key;
+            const pKey = curr.parent.key;
             root = rotateLeftRB(root, curr.parent.parent);
 
             steps.push({
               stepIndex: steps.length,
               totalSteps: 0,
-              title: `Case 3: Uncle is BLACK (Line) $\\implies$ Left Rotate on Grandparent`,
-              subtitle: `Parent $\\to$ BLACK, Grandparent $\\to$ RED, Left Rotate`,
+              title: `${stepPrefix}.3: Case 3 — Uncle is BLACK (Line) ⟹ Left Rotate on Grandparent`,
+              subtitle: `Parent ${pKey} → BLACK, Grandparent ${gKey} → RED, Left Rotate on ${gKey}`,
               category: 'TREE',
               algorithmName: 'Red-Black Tree Insertion',
-              facultyExplanation: `Node ${curr.key} is in a straight line with Parent and Grandparent (Case 3).\nAction: Recolor Parent to BLACK, Grandparent to RED, and perform a Left Rotation on Grandparent.`,
-              mathematicalDerivation: `\\text{Case 3: } P \\to \\text{BLACK}, \\; G \\to \\text{RED}, \\; \\text{RotateLeft}(G)`,
+              facultyExplanation: `Node ${curr.key} is in a straight line with Parent and Grandparent (Case 3).\n\nAction: Recolor Parent ${pKey} to BLACK, Grandparent ${gKey} to RED, and perform a Left Rotation on Grandparent ${gKey}.`,
+              mathematicalDerivation: `\\text{Case 3: } P(${pKey}) \\to \\text{BLACK}, \\; G(${gKey}) \\to \\text{RED}, \\; \\text{RotateLeft}(G = ${gKey})`,
               examRule: 'Case 3 Rule: Swap colors of Parent and Grandparent, then rotate parent around grandparent.',
               statusBadge: { text: 'Case 3: Rotate & Recolor', variant: 'danger' },
+              rotationMeta: {
+                type: 'CASE_3',
+                pivotKey: gKey,
+                elevatingKey: pKey,
+                direction: 'counter-clockwise',
+                subPhase: 'ROTATION_EXECUTION',
+                stepNumberLabel: `${stepPrefix}.3`,
+                description: `Left Rotate on Grandparent ${gKey} with Parent ${pKey} recolored BLACK`,
+              },
               treeState: convertRBToTreeNode(root),
               traceTableHeaders: ['Key', 'Color', 'Parent', 'Left Child', 'Right Child', 'Black-Height'],
               traceTableRows: collectRBRows(root),
@@ -356,7 +420,7 @@ function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNo
     steps.push({
       stepIndex: steps.length,
       totalSteps: 0,
-      title: 'Root Recolor to BLACK',
+      title: `${stepPrefix}.Final: Root Recolor to BLACK`,
       subtitle: 'Enforcing Root Property (Root is always BLACK)',
       category: 'TREE',
       algorithmName: 'Red-Black Tree Insertion',
@@ -364,6 +428,13 @@ function fixRedBlackInsert(root: RBNode, z: RBNode, steps: StepSnapshot[]): RBNo
       mathematicalDerivation: '\\text{color}(\\text{Root}) = \\text{BLACK}',
       examRule: 'Root Invariant: Always finish by setting the root color to BLACK.',
       statusBadge: { text: 'Root Set to BLACK', variant: 'normal' },
+      rotationMeta: {
+        type: 'RECOLOR',
+        pivotKey: root.key,
+        subPhase: 'RECOLORED_BALANCED',
+        stepNumberLabel: `${stepPrefix}.Final`,
+        description: `Set root ${root.key} color to BLACK`,
+      },
       treeState: convertRBToTreeNode(root),
       traceTableHeaders: ['Key', 'Color', 'Parent', 'Left Child', 'Right Child', 'Black-Height'],
       traceTableRows: collectRBRows(root),

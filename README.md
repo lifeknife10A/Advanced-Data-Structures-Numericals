@@ -73,6 +73,7 @@ Generic CS tools often employ blinding high-saturation gradients, neon animation
 | Capability | Description |
 | :--- | :--- |
 | **Complete Step Snapshots** | Every single algorithmic step generates an immutable snapshot containing tree/graph state, node coordinates, highlight classes, active status messages, and KaTeX mathematical formulas. |
+| **Granular Rotation Sub-Steps** | Rotations are not treated as atomic jumps; when an imbalance occurs at Step $X$, it is decomposed into educational sub-steps ($X.1$ Imbalance Detection & Pivot Isolation $\to$ $X.2$ Subtree Reparenting & Pointer Shift $\to$ $X.3$ Invariant Restored) with animated SVG rotation curved arcs. |
 | **Slide-Out Faculty Drawer** | An expandable right-side ledger displaying the current operation, algorithmic justification, step-by-step historical log, live state tables (distance, balance factor, in-degree, DSU), and KaTeX equations. |
 | **One-Click Markdown Exporter** | Generates cleanly formatted, copy-pasteable Markdown answers for assignments, plotter copy formats, and exam solution keys. |
 | **Interactive Inline Operations** | Click any node directly on the canvas to trigger immediate deletions (bottom-up / top-down), launch key searches, or insert custom keys on the fly. |
