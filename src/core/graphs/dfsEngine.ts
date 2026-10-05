@@ -42,12 +42,12 @@ export function generateDFSSteps(graph: GraphData, startVertexId: string): StepS
     stepIndex: 0,
     totalSteps: 0,
     title: `Initialize DFS from Source Vertex ${startVertexId}`,
-    subtitle: `Starting Depth-First Search recursion / stack trace`,
+    subtitle: `Push start vertex ${startVertexId} onto Call Stack and mark visited`,
     category: 'GRAPH',
     algorithmName: 'Depth-First Search (DFS)',
-    facultyExplanation: `DFS explores as deep as possible along each branch before backtracking. We maintain discovery times d[v] and finish times f[v]. Starting at ${startVertexId}.`,
-    mathematicalDerivation: `\\text{Call Stack} = [${startVertexId}], \\quad \\text{Timer } t = 1`,
-    examRule: 'DFS Rule: Record discovery time d[v] when first visited, and finish time f[v] when all adjacent edges are exhausted.',
+    facultyExplanation: `DFS explores as deep as possible along each branch before backtracking. We initialize the Call Stack with start vertex ${startVertexId} and add it to the Visited Array.`,
+    mathematicalDerivation: `\\text{Stack} = [${startVertexId}], \\quad \\text{Visited} = [${startVertexId}]`,
+    examRule: 'DFS Rule: Push discovering vertices onto the Stack and record them in the Visited Array; pop when all adjacent branches are exhausted.',
     statusBadge: { text: `Start = ${startVertexId}`, variant: 'normal' },
     graphState: cloneGraphState(),
     activeNodeIds: [startVertexId],
@@ -55,8 +55,12 @@ export function generateDFSSteps(graph: GraphData, startVertexId: string): StepS
     traceTableRows: [],
     auxiliaryState: {
       type: 'stack',
-      label: 'Call Stack',
+      label: 'Call Stack (LIFO)',
       items: [startVertexId],
+      visitedItems: [startVertexId],
+      actionType: 'push',
+      activeItem: startVertexId,
+      extraInfo: `Start at vertex ${startVertexId}`,
     },
   });
 
@@ -64,7 +68,9 @@ export function generateDFSSteps(graph: GraphData, startVertexId: string): StepS
     discoveryTime[u] = timer++;
     visited.add(u);
     stack.push(u);
-    traversalOrder.push(u);
+    if (!traversalOrder.includes(u)) {
+      traversalOrder.push(u);
+    }
 
     const uV = vertices.find((v) => v.id === u);
     if (uV) uV.state = 'visiting';
@@ -72,14 +78,14 @@ export function generateDFSSteps(graph: GraphData, startVertexId: string): StepS
     steps.push({
       stepIndex: steps.length,
       totalSteps: 0,
-      title: `Discover Node ${u} (Time d[${u}] = ${discoveryTime[u]})`,
-      subtitle: `Call Stack: [${stack.join(' → ')}]`,
+      title: `Discover & Push Node ${u} onto Stack`,
+      subtitle: `Call Stack: [${stack.join(' → ')}] | Visited: [${traversalOrder.join(', ')}]`,
       category: 'GRAPH',
       algorithmName: 'Depth-First Search (DFS)',
-      facultyExplanation: `First discovery of vertex ${u}. Setting discovery timestamp d[${u}] = ${discoveryTime[u]}. Pushing ${u} onto call stack.`,
-      mathematicalDerivation: `d[${u}] = ${discoveryTime[u]}, \\quad \\text{Stack} = [${stack.join(', ')}]`,
-      examRule: 'Discovery Timestamp: Increment global clock t on entry into vertex.',
-      statusBadge: { text: `Discovered ${u} (t=${discoveryTime[u]})`, variant: 'accent' },
+      facultyExplanation: `First discovery of vertex ${u}. Pushing ${u} onto Call Stack and appending to the Visited Array. Timestamp d[${u}] = ${discoveryTime[u]}.`,
+      mathematicalDerivation: `\\text{PUSH}(${u}) \\implies \\text{Stack} = [${stack.join(', ')}], \\quad \\text{Visited} = [${traversalOrder.join(', ')}]`,
+      examRule: 'Stack Push: Every newly discovered unvisited node is pushed onto the stack immediately.',
+      statusBadge: { text: `PUSH ${u}`, variant: 'accent' },
       graphState: cloneGraphState(),
       activeNodeIds: [u],
       traceTableHeaders: ['Vertex', 'Discovery Time d[v]', 'Finish Time f[v]', 'Status', 'Parent'],
@@ -98,6 +104,9 @@ export function generateDFSSteps(graph: GraphData, startVertexId: string): StepS
         type: 'stack',
         label: 'Call Stack (LIFO)',
         items: [...stack],
+        visitedItems: [...traversalOrder],
+        actionType: 'push',
+        activeItem: u,
         extraInfo: `Discovery Order: ${traversalOrder.join(' → ')}`,
       },
     });
@@ -131,14 +140,14 @@ export function generateDFSSteps(graph: GraphData, startVertexId: string): StepS
     steps.push({
       stepIndex: steps.length,
       totalSteps: 0,
-      title: `Finish Node ${u} (Time f[${u}] = ${finishTime[u]}) $\\to$ Backtrack`,
-      subtitle: `All edges explored from ${u}. Popping from Call Stack.`,
+      title: `Pop Node ${u} from Stack $\\to$ Backtrack`,
+      subtitle: `All neighbors explored from ${u}. Popping from Stack.`,
       category: 'GRAPH',
       algorithmName: 'Depth-First Search (DFS)',
-      facultyExplanation: `All outgoing edges from vertex ${u} have been completely explored. Setting finish timestamp f[${u}] = ${finishTime[u]}. Popping ${u} from call stack and backtracking.`,
-      mathematicalDerivation: `f[${u}] = ${finishTime[u]}, \\quad \\text{Active Interval: } [d[${u}], f[${u}]] = [${discoveryTime[u]}, ${finishTime[u]}]`,
-      examRule: 'Parenthesis Theorem: The interval [d[u], f[u]] for a descendant is strictly nested within its ancestor.',
-      statusBadge: { text: `Finished ${u} (t=${finishTime[u]})`, variant: 'success' },
+      facultyExplanation: `All adjacent edges from vertex ${u} have been completely explored. Popping ${u} from the Call Stack and backtracking to parent.`,
+      mathematicalDerivation: `\\text{POP}(${u}) \\implies \\text{Stack} = [${stack.join(', ')}], \\quad f[${u}] = ${finishTime[u]}`,
+      examRule: 'Stack Pop & Backtracking: A node is popped from the stack once all its adjacent vertices are finished.',
+      statusBadge: { text: `POP ${u}`, variant: 'success' },
       graphState: cloneGraphState(),
       activeNodeIds: [u],
       traceTableHeaders: ['Vertex', 'Discovery Time d[v]', 'Finish Time f[v]', 'Status', 'Parent'],
@@ -157,7 +166,10 @@ export function generateDFSSteps(graph: GraphData, startVertexId: string): StepS
         type: 'stack',
         label: 'Call Stack (LIFO)',
         items: [...stack],
-        extraInfo: `Active Interval for ${u}: [${discoveryTime[u]}, ${finishTime[u]}]`,
+        visitedItems: [...traversalOrder],
+        actionType: 'pop',
+        activeItem: u,
+        extraInfo: `Backtracking from ${u}. Remaining Stack: [${stack.join(', ')}]`,
       },
     });
   }
@@ -169,12 +181,12 @@ export function generateDFSSteps(graph: GraphData, startVertexId: string): StepS
     stepIndex: steps.length,
     totalSteps: 0,
     title: 'DFS Traversal Completed',
-    subtitle: `Discovery Order: ${traversalOrder.join(' → ')}`,
+    subtitle: `Final Traversal Sequence: ${traversalOrder.join(' → ')}`,
     category: 'GRAPH',
     algorithmName: 'Depth-First Search (DFS)',
-    facultyExplanation: `DFS completed.\nTraversal Sequence: ${traversalOrder.join(' → ')}\nTree Edges: ${treeEdges.join(', ')}\nBack Edges: ${backEdges.join(', ')}`,
-    mathematicalDerivation: `\\text{DFS Order: } ${traversalOrder.join(' \\to ')}`,
-    examRule: 'Final exam output: State discovery timestamps d[v], finish timestamps f[v], and classify all Tree and Back Edges.',
+    facultyExplanation: `DFS completed.\nFinal Visited Traversal Sequence: ${traversalOrder.join(' → ')}\nTree Edges: ${treeEdges.join(', ')}\nBack Edges: ${backEdges.join(', ')}`,
+    mathematicalDerivation: `\\text{Final Visited Array} = [${traversalOrder.join(', ')}]`,
+    examRule: 'Final exam output: State the final Visited Array traversal order and classify all Tree and Back Edges.',
     statusBadge: { text: 'DFS Completed', variant: 'success' },
     graphState: cloneGraphState(),
     traceTableHeaders: ['Vertex', 'Discovery Time d[v]', 'Finish Time f[v]', 'Status', 'Parent'],
@@ -189,9 +201,11 @@ export function generateDFSSteps(graph: GraphData, startVertexId: string): StepS
       ],
     })),
     auxiliaryState: {
-      type: 'topo_list',
-      label: 'DFS Discovery Sequence',
-      items: traversalOrder,
+      type: 'stack',
+      label: 'Call Stack (LIFO)',
+      items: [],
+      visitedItems: [...traversalOrder],
+      actionType: 'none',
       extraInfo: `Tree Edges: ${treeEdges.join(', ')} | Back Edges: ${backEdges.join(', ')}`,
     },
   });

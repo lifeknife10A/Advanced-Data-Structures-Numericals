@@ -7,6 +7,17 @@ export interface TraceTableRow {
   isHighlighted?: boolean;
 }
 
+export interface AuxiliaryState {
+  type: 'queue' | 'stack' | 'mst' | 'topo_list' | 'dsu' | 'priority_queue' | 'rebalance';
+  label: string;
+  items: string[];
+  visitedItems?: string[];
+  actionType?: 'push' | 'pop' | 'enqueue' | 'dequeue' | 'visit' | 'none';
+  activeItem?: string;
+  enqueuedItems?: string[];
+  extraInfo?: string;
+}
+
 export interface StepSnapshot {
   stepIndex: number;
   totalSteps: number;
@@ -55,10 +66,5 @@ export interface StepSnapshot {
   stepNumberLabel?: string;
 
   // Auxiliary Structures (Queue, Stack, MST set, Topological List, DSU)
-  auxiliaryState?: {
-    type: 'queue' | 'stack' | 'mst' | 'topo_list' | 'dsu' | 'priority_queue' | 'rebalance';
-    label: string;
-    items: string[];
-    extraInfo?: string;
-  };
+  auxiliaryState?: AuxiliaryState;
 }
