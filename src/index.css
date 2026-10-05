@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: 'EB Garamond', 'Times New Roman', Georgia, serif;
+    --font-display: 'Playfair Display', 'Cinzel', Georgia, serif;
+    --font-title: 'Cinzel', 'Playfair Display', serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Champagne Editorial Palette */
+    --bg-canvas: #FAF8F5;
+    --bg-surface: #F4EFE6;
+    --bg-surface-elevated: #EDE5D8;
+    --border-subtle: #E2D8C7;
+    --border-strong: #C4B59D;
+    
+    --ink-primary: #221F1E;
+    --ink-secondary: #59524A;
+    --ink-muted: #847B72;
+
+    --accent-terracotta: #8C2D19;
+    --accent-gold: #8C6D3B;
+    --accent-forest: #2B4C38;
+    --accent-navy: #1D3557;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--ink-primary);
+    font-family: var(--font-serif);
+    font-size: 17px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    color: var(--ink-primary);
+  }
+}
+
+/* Custom Scrollbars in Champagne Aesthetic */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F4EFE6;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4C6B1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B5A48C;
+}
+
+/* KaTeX custom formatting for crisp editorial formulas */
+.katex {
+  font-size: 1.22em !important;
+}
+.katex-display {
+  margin: 0.7em 0 !important;
+}
+
+/* Smooth Canvas Node Animations */
+.node-transition {
+  transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.edge-path {
+  transition: stroke 300ms ease, stroke-width 300ms ease;
+}
