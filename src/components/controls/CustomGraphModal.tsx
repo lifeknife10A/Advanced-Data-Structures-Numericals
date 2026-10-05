@@ -19,6 +19,129 @@ interface CustomGraphModalProps {
   onSubmitGraph: (graph: GraphData, startVertex?: string) => void;
 }
 
+/**
+ * Intelligent parser for tabular Adjacency Matrices (e.g. from exam question papers)
+ */
+function tryParseAdjacencyMatrix(
+  raw: string,
+  isWeightedAlgo: boolean,
+  isDirectedDefault: boolean
+): { vertices: GraphVertex[]; edges: GraphEdge[] } | null {
+  const lines = raw
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith('#'));
+
+  if (lines.length < 2) return null;
+
+  // Check if first line contains column headers (e.g. "A B C D E F" or "1 2 3 4 5 6")
+  const firstTokens = lines[0].split(/[\s,\t|]+/).filter((t) => t.length > 0);
+  let headers: string[] = [];
+  let matrixStartRow = 0;
+
+  // If first line tokens are all non-numeric strings or letters, they could be headers
+  const isFirstLineHeaders = firstTokens.every((t) => isNaN(Number(t)));
+  if (isFirstLineHeaders && firstTokens.length >= 2) {
+    headers = firstTokens;
+    matrixStartRow = 1;
+  }
+
+  const rowData: { label: string; values: number[] }[] = [];
+
+  for (let r = matrixStartRow; r < lines.length; r++) {
+    const tokens = lines[r].split(/[\s,\t|:]+/).filter((t) => t.length > 0);
+    if (tokens.length === 0) continue;
+
+    // Check if first token is a row label (e.g. "A" or "1")
+    let rowLabel = '';
+    let numTokens: string[] = [];
+
+    if (isNaN(Number(tokens[0])) || (headers.length > 0 && tokens.length === headers.length + 1)) {
+      rowLabel = tokens[0];
+      numTokens = tokens.slice(1);
+    } else {
+      numTokens = tokens;
+    }
+
+    // Check if all numTokens can be parsed as numbers (or '-' / 'inf' / '∞')
+    const numbers: number[] = [];
+    for (const tok of numTokens) {
+      if (tok === '-' || tok === '∞' || tok.toLowerCase() === 'inf' || tok === 'null') {
+        numbers.push(0);
+      } else {
+        const num = Number(tok);
+        if (isNaN(num)) return null; // Not a matrix row
+        numbers.push(num);
+      }
+    }
+
+    if (numbers.length === 0) return null;
+    rowData.push({
+      label: rowLabel || (headers[rowData.length] ?? String.fromCharCode(65 + rowData.length)),
+      values: numbers,
+    });
+  }
+
+  if (rowData.length < 2) return null;
+
+  // Check that each row has the same dimension N equal to rowData.length
+  const N = rowData.length;
+  const isSquare = rowData.every((r) => r.values.length === N);
+  if (!isSquare) return null;
+
+  // Construct vertex labels
+  const vertexLabels = rowData.map((r, i) => r.label || headers[i] || String.fromCharCode(65 + i));
+  const vertices: GraphVertex[] = vertexLabels.map((lbl) => ({
+    id: lbl,
+    label: lbl,
+    x: 0,
+    y: 0,
+    state: 'unvisited',
+  }));
+
+  // Check if matrix is symmetric
+  let isSymmetric = true;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      if (rowData[i].values[j] !== rowData[j].values[i]) {
+        isSymmetric = false;
+        break;
+      }
+    }
+    if (!isSymmetric) break;
+  }
+
+  const isDirected = isDirectedDefault || !isSymmetric;
+  const edges: GraphEdge[] = [];
+  const visitedPairs = new Set<string>();
+
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      if (i === j) continue; // Skip self loops
+      const val = rowData[i].values[j];
+      if (val !== 0) {
+        const u = vertexLabels[i];
+        const v = vertexLabels[j];
+        const pairKey = isDirected ? `${u}->${v}` : [u, v].sort().join('-');
+
+        if (!visitedPairs.has(pairKey)) {
+          visitedPairs.add(pairKey);
+          edges.push({
+            id: `e-${u}-${v}-${edges.length}`,
+            source: u,
+            target: v,
+            weight: isWeightedAlgo ? val : undefined,
+            directed: isDirected,
+            state: 'unvisited',
+          });
+        }
+      }
+    }
+  }
+
+  return { vertices, edges };
+}
+
 export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
   isOpen,
   algorithmId,
@@ -95,11 +218,24 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
     setError(null);
   };
 
-  // Parse Text Syntax
+  // Parse Text Syntax (Supports Edge lists, Adjacency Lists, and Adjacency Matrices)
   const parseTextSyntax = (): { graph: GraphData; start: string } => {
     const raw = textInput.trim();
     if (!raw) {
       throw new Error('Graph definition text cannot be empty.');
+    }
+
+    // Attempt to parse as an Adjacency Matrix first
+    const matrixResult = tryParseAdjacencyMatrix(raw, isWeightedAlgo, isDirectedDefault);
+    if (matrixResult) {
+      const finalStart = textStartVertex.trim() && matrixResult.vertices.some((v) => v.id === textStartVertex.trim())
+        ? textStartVertex.trim()
+        : matrixResult.vertices[0]?.id || 'A';
+
+      return {
+        graph: layoutGraph(matrixResult),
+        start: finalStart,
+      };
     }
 
     const vertexSet = new Set<string>();
@@ -154,7 +290,7 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
         if (singleVMatch) {
           vertexSet.add(singleVMatch[0].trim());
         } else {
-          throw new Error(`Unrecognized edge or vertex syntax: "${token}". Expected format: ${isWeightedAlgo ? 'A-B: 4 or A->B: 4' : 'A-B or A->B'}`);
+          throw new Error(`Unrecognized edge, vertex, or matrix syntax: "${token}". Expected format: ${isWeightedAlgo ? 'A-B: 4 or A->B: 4' : 'A-B or A->B'}`);
         }
       }
     }
@@ -429,6 +565,9 @@ export const CustomGraphModal: React.FC<CustomGraphModalProps> = ({
                       </p>
                     </>
                   )}
+                  <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
+                    • Adjacency Matrix: <span className="text-[#221F1E]">Paste raw N×N matrices with 0/1/weights directly</span>
+                  </p>
                   <p className="m-0 font-mono text-[10.5px] text-[#8C2D19]">
                     • Standalone Vertices: <span className="text-[#221F1E]">V: A, B, C, D, E, F</span>
                   </p>
